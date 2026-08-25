@@ -14,19 +14,19 @@ repos:
   - name: iagorobo24-hub/automaton-landing
     showcase: false
   - name: iagorobo24-hub/Autotrader
-    showcase: false
+    showcase: true
   - name: iagorobo24-hub/Autotrader-con-IA
-    showcase: false
+    showcase: true
   - name: iagorobo24-hub/awesome-tia-portal
-    showcase: false
+    showcase: true
   - name: iagorobo24-hub/business-building
     showcase: false
   - name: iagorobo24-hub/Chatbot_WhatsApp
     showcase: false
   - name: iagorobo24-hub/Freebuff-telegram-bot
-    showcase: false
+    showcase: true
   - name: iagorobo24-hub/Listado-Materiales
-    showcase: false
+    showcase: true
   - name: iagorobo24-hub/NexoDigital
     showcase: false
   - name: iagorobo24-hub/OpenAMRobot_UI_Contribute
@@ -36,7 +36,7 @@ repos:
   - name: iagorobo24-hub/PC-Ops
     showcase: false
   - name: iagorobo24-hub/pokemon-auction-house
-    showcase: false
+    showcase: true
   - name: iagorobo24-hub/portfolio
     showcase: false
   - name: iagorobo24-hub/portfolio-3D
@@ -44,6 +44,6 @@ repos:
   - name: iagorobo24-hub/project-system-map
     showcase: false
   - name: iagorobo24-hub/proyecto-pfc-iago-duran
-    showcase: false
+    showcase: true
   - name: iagorobo24-hub/Proyecto_MAMA
     showcase: false
