@@ -1,27 +1,34 @@
-"""deck -> Drive. Sube out/deck.pdf a Google Drive vía rclone.
+"""deck -> Drive. Sube out/deck.pdf (o out/portfolio.pdf) a Google Drive vía rclone.
 
 Sigue la estructura del skeleton:
     Portfolio/
     ├── semanal/<ISO-week>/devlog.pdf
-    ├── master/portfolio.pdf   (deck maestro, fuera de alcance por ahora)
+    ├── master/portfolio.pdf
     └── assets/
 
-La semana se calcula a partir de "generated_at" en out/summaries.json, no de
-la fecha de hoy: así el destino es determinista a partir de los datos que ya
-recogió el pipeline, no de cuándo por casualidad se ejecuta publish.py.
+--target semanal (por defecto) sube out/deck.pdf. La semana se calcula a
+partir de "generated_at" en out/summaries.json, no de la fecha de hoy: así
+el destino es determinista a partir de los datos que ya recogió el
+pipeline, no de cuándo por casualidad se ejecuta publish.py.
+
+--target master sube out/portfolio.pdf a Portfolio/master/portfolio.pdf. Si
+ese archivo no existe (render_master.py decidió saltarse esta semana por el
+umbral de actividad), no es un error: se loguea y se sale sin más.
 
 Necesita:
 - rclone en el PATH.
 - RCLONE_CONF: contenido completo de un rclone.conf con un remote de Google
-  Drive ya configurado vía service account (sin flujo interactivo — así
-  funciona en GitHub Actions). Se escribe a un archivo temporal con
-  permisos 600 durante la subida y se borra al terminar; nunca se toca
-  ~/.config/rclone/.
+  Drive ya configurado (token OAuth con refresh_token — una service account
+  NO funciona en Drive personal/Gmail: no tiene cuota propia ni siquiera en
+  carpetas compartidas con ella, solo en Shared Drives de Workspace). Se
+  escribe a un archivo temporal con permisos 600 durante la subida y se
+  borra al terminar; nunca se toca ~/.config/rclone/.
 - RCLONE_REMOTE: nombre del remote dentro de ese rclone.conf (por defecto
   "gdrive").
 
 Flags:
   --dry-run          no sube nada; imprime el destino calculado y sale
+  --target {semanal,master}   qué deck subir (por defecto semanal)
   --remote NOMBRE    nombre del remote de rclone (por defecto RCLONE_REMOTE
                       o "gdrive")
 """
@@ -42,6 +49,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SUMMARIES_PATH = ROOT / "out" / "summaries.json"
 DECK_PDF_PATH = ROOT / "out" / "deck.pdf"
+PORTFOLIO_PDF_PATH = ROOT / "out" / "portfolio.pdf"
 
 DEFAULT_REMOTE = os.environ.get("RCLONE_REMOTE", "gdrive")
 
@@ -62,8 +70,12 @@ def iso_week_folder(dt: datetime) -> str:
     return f"{year}-W{week:02d}"
 
 
-def remote_path(remote: str, week: str) -> str:
+def weekly_remote_path(remote: str, week: str) -> str:
     return f"{remote}:Portfolio/semanal/{week}/devlog.pdf"
+
+
+def master_remote_path(remote: str) -> str:
+    return f"{remote}:Portfolio/master/portfolio.pdf"
 
 
 def upload(local_path: Path, dest: str, rclone_conf: str) -> None:
@@ -87,6 +99,7 @@ def upload(local_path: Path, dest: str, rclone_conf: str) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dry-run", action="store_true", help="No sube nada; imprime el destino calculado.")
+    parser.add_argument("--target", choices=["semanal", "master"], default="semanal", help="Qué deck subir (por defecto semanal).")
     parser.add_argument("--remote", default=DEFAULT_REMOTE, help=f"Nombre del remote de rclone (por defecto {DEFAULT_REMOTE}).")
     return parser.parse_args()
 
@@ -94,16 +107,22 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    if not DECK_PDF_PATH.exists():
-        log.error("%s no existe; corre render.py primero", DECK_PDF_PATH)
-        sys.exit(1)
-
-    generated_at = load_generated_at()
-    week = iso_week_folder(generated_at)
-    dest = remote_path(args.remote, week)
+    if args.target == "master":
+        local_path = PORTFOLIO_PDF_PATH
+        if not local_path.exists():
+            log.info("%s no existe (el deck maestro no se generó esta semana); nada que publicar", local_path)
+            return
+        dest = master_remote_path(args.remote)
+    else:
+        local_path = DECK_PDF_PATH
+        if not local_path.exists():
+            log.error("%s no existe; corre render.py primero", local_path)
+            sys.exit(1)
+        week = iso_week_folder(load_generated_at())
+        dest = weekly_remote_path(args.remote, week)
 
     if args.dry_run:
-        log.info("dry-run: subiría %s -> %s", DECK_PDF_PATH, dest)
+        log.info("dry-run: subiría %s -> %s", local_path, dest)
         return
 
     rclone_conf = os.environ.get("RCLONE_CONF")
@@ -112,11 +131,11 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        upload(DECK_PDF_PATH, dest, rclone_conf)
+        upload(local_path, dest, rclone_conf)
     except subprocess.CalledProcessError as e:
         log.error("rclone falló subiendo a %s (código %d)", dest, e.returncode)
         sys.exit(1)
-    log.info("subido %s -> %s", DECK_PDF_PATH, dest)
+    log.info("subido %s -> %s", local_path, dest)
 
 
 if __name__ == "__main__":

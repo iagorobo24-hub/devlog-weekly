@@ -1,0 +1,26 @@
+---
+marp: true
+theme: default
+paginate: true
+size: 16:9
+style: |
+  section {
+    font-size: 26px;
+  }
+---
+
+<!-- _paginate: false -->
+
+# Portfolio
+
+{% for entry in entries %}
+---
+
+## {{ entry.name.split('/')[-1] }}
+{% if entry.pitch %}
+*{{ entry.pitch }}*
+{% endif %}
+
+{{ entry.narrativa }}
+
+{% endfor %}

@@ -49,6 +49,18 @@ jobs:
           uv run python src/collect.py --commit-state
           uv run python src/synthesize.py --commit-state
 
+      - name: Renderizar deck maestro
+        # Después de "Confirmar estado" a propósito: lee state/narrative/*.md,
+        # y ahí ya está la narrativa actualizada con lo de esta semana (antes
+        # de "Confirmar estado" seguiría siendo la de la semana pasada). Se
+        # salta solo si ningún repo showcase tuvo actividad.
+        run: uv run python src/render_master.py
+
+      - name: Publicar deck maestro
+        run: uv run python src/publish.py --target master
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+
       - name: Guardar estado
         run: |
           git config user.name "devlog-bot"
