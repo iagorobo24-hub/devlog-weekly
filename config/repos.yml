@@ -5,3 +5,45 @@ repos:
   - name: iagorobo24-hub/GestionaB2B
     showcase: true
     pitch: "SaaS de gestión de stock B2B con copiloto de IA integrado"
+
+  # Resto de repos, añadidos en bloque. showcase/pitch a mano cuando decidas
+  # cuáles son de escaparate (ver nota en el README del skeleton: esto no
+  # lo debe adivinar el modelo).
+  - name: iagorobo24-hub/AUTOMATON
+    showcase: false
+  - name: iagorobo24-hub/automaton-landing
+    showcase: false
+  - name: iagorobo24-hub/Autotrader
+    showcase: false
+  - name: iagorobo24-hub/Autotrader-con-IA
+    showcase: false
+  - name: iagorobo24-hub/awesome-tia-portal
+    showcase: false
+  - name: iagorobo24-hub/business-building
+    showcase: false
+  - name: iagorobo24-hub/Chatbot_WhatsApp
+    showcase: false
+  - name: iagorobo24-hub/Freebuff-telegram-bot
+    showcase: false
+  - name: iagorobo24-hub/Listado-Materiales
+    showcase: false
+  - name: iagorobo24-hub/NexoDigital
+    showcase: false
+  - name: iagorobo24-hub/OpenAMRobot_UI_Contribute
+    showcase: false
+  - name: iagorobo24-hub/opencode-telegram-bot
+    showcase: false
+  - name: iagorobo24-hub/PC-Ops
+    showcase: false
+  - name: iagorobo24-hub/pokemon-auction-house
+    showcase: false
+  - name: iagorobo24-hub/portfolio
+    showcase: false
+  - name: iagorobo24-hub/portfolio-3D
+    showcase: false
+  - name: iagorobo24-hub/project-system-map
+    showcase: false
+  - name: iagorobo24-hub/proyecto-pfc-iago-duran
+    showcase: false
+  - name: iagorobo24-hub/Proyecto_MAMA
+    showcase: false
