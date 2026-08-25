@@ -1,0 +1,105 @@
+/* @theme devlog */
+@import 'default';
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0d1117;
+  --fg: #c9d1d9;
+  --muted: #7d8590;
+  --accent: #58a6ff;
+  --accent-2: #3fb950;
+  --card: #161b22;
+  --border: #30363d;
+}
+
+section {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', 'DejaVu Sans', sans-serif;
+  padding: 70px 80px;
+}
+
+/* Title slide */
+section.lead {
+  justify-content: center;
+}
+h1 {
+  font-family: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  color: #ffffff;
+  font-size: 1.9em;
+  font-weight: 700;
+  margin-bottom: 0.1em;
+}
+h1::before {
+  content: '$ ';
+  color: var(--accent-2);
+}
+h1 + p {
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55em;
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  font-family: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  color: var(--accent);
+  font-size: 1.3em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25em;
+  margin-bottom: 0.4em;
+}
+h2::before {
+  content: '> ';
+  color: var(--accent-2);
+}
+
+h3 {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+em {
+  display: inline-block;
+  color: var(--muted);
+  font-style: normal;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15em 0.6em;
+  font-size: 0.62em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+ul {
+  margin-top: 0.3em;
+}
+li {
+  margin-bottom: 0.55em;
+  line-height: 1.5;
+}
+li::marker {
+  color: var(--accent-2);
+  content: '▸ ';
+}
+
+strong {
+  color: var(--accent);
+}
+
+p:has(strong) {
+  margin-top: 1em;
+  padding: 0.6em 0.9em;
+  background: var(--card);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+section::after {
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5em;
+}

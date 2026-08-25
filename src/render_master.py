@@ -43,6 +43,7 @@ NARRATIVE_DIR = ROOT / "state" / "narrative"
 SUMMARIES_PATH = ROOT / "out" / "summaries.json"
 TEMPLATE_DIR = ROOT / "templates"
 TEMPLATE_NAME = "portfolio.md.j2"
+THEME_PATH = ROOT / "templates" / "theme.css"
 PORTFOLIO_MD_PATH = ROOT / "out" / "portfolio.md"
 PORTFOLIO_PDF_PATH = ROOT / "out" / "portfolio.pdf"
 
@@ -86,7 +87,10 @@ def convert_to_pdf(md_path: Path, pdf_path: Path) -> None:
     if marp is None:
         log.error("marp-cli no está instalado (npm install -g @marp-team/marp-cli)")
         sys.exit(1)
-    subprocess.run([marp, str(md_path), "--pdf", "--allow-local-files", "-o", str(pdf_path)], check=True)
+    subprocess.run(
+        [marp, str(md_path), "--pdf", "--allow-local-files", "--theme-set", str(THEME_PATH), "-o", str(pdf_path)],
+        check=True,
+    )
 
 
 def parse_args() -> argparse.Namespace:
