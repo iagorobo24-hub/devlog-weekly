@@ -1,0 +1,7 @@
+defaults:
+  since_days: 7
+
+repos:
+  - name: iagorobo24-hub/GestionaB2B
+    showcase: true
+    pitch: "SaaS de gestión de stock B2B con copiloto de IA integrado"

@@ -1,0 +1,44 @@
+---
+marp: true
+theme: default
+paginate: true
+size: 16:9
+style: |
+  section {
+    font-size: 26px;
+  }
+---
+
+<!-- _paginate: false -->
+
+# Devlog semanal
+
+{{ periodo_desde }} → {{ periodo_hasta }}
+
+{% for repo in repos %}
+---
+
+## {{ repo.name.split('/')[-1] }}
+{% if repo.pitch %}
+*{{ repo.pitch }}*
+{% endif %}
+
+### {{ repo.titular }}
+
+{% if repo.trivial %}
+_Sin actividad esta semana._
+{% endif %}
+
+{% if not repo.trivial %}
+---
+
+## {{ repo.name.split('/')[-1] }}
+
+{% for avance in repo.avances %}
+- {{ avance }}
+{% endfor %}
+
+**Estado:** {{ repo.estado }}
+
+{% endif %}
+{% endfor %}

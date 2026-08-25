@@ -1,0 +1,58 @@
+name: devlog semanal
+
+on:
+  schedule:
+    - cron: '0 7 * * MON'   # UTC. En horario de verano español son las 09:00.
+  workflow_dispatch:         # para dispararlo a mano
+
+permissions:
+  contents: write            # necesario para comitear state/
+
+jobs:
+  devlog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync
+
+      - uses: actions/setup-node@v7
+      - run: npm install -g @marp-team/marp-cli
+
+      - name: Instalar rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Recoger
+        run: uv run python src/collect.py
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+
+      - name: Sintetizar
+        run: uv run python src/synthesize.py
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+
+      - name: Renderizar
+        run: uv run python src/render.py
+
+      - name: Publicar
+        run: uv run python src/publish.py
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+
+      - name: Confirmar estado
+        # Deliberadamente después de publish.py: si algo falla antes de aquí,
+        # el job para y state/ no se toca, así que la semana se puede
+        # reintentar sin perder la ventana ni duplicar narrativa.
+        run: |
+          uv run python src/collect.py --commit-state
+          uv run python src/synthesize.py --commit-state
+
+      - name: Guardar estado
+        run: |
+          git config user.name "devlog-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add state/
+          git diff --staged --quiet || git commit -m "state: semana $(date +%Y-W%V)"
+          git push
