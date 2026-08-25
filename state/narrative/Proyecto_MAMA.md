@@ -1,0 +1,1 @@
+Semana 1 (18-25 de agosto de 2026): Inicio del proyecto con importantes avances en seguridad (CSP, pruebas de accesibilidad, solución de vulnerabilidades), rediseño de landing page, desarrollo de funcionalidades de email y RGPD, y mejoras en infraestructura. Total de 9 commits, 66 archivos modificados, 7082 líneas agregadas y 2757 eliminadas.

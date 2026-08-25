@@ -1,0 +1,1 @@
+Semana 1 (18-25 Ago 2026): Inicio del seguimiento con un sprint intensivo de 39 commits. Se enfocaron en estabilizar la conversación, mejorar la verificación de turnos Freebuff, aumentar la seguridad y actualizar la documentación. Se lanzaron varias versiones (v1.3.0, v1.0.0, v1.0, v1), indicando un punto de consolidación en el proyecto.

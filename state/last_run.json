@@ -1,6 +1,264 @@
 {
   "iagorobo24-hub/GestionaB2B": {
-    "since": "2026-08-25T10:04:06.151713+00:00",
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/AUTOMATON": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/automaton-landing": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/Autotrader": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/Autotrader-con-IA": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/awesome-tia-portal": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/business-building": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/Chatbot_WhatsApp": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/Freebuff-telegram-bot": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": [
+      "v1.3.0",
+      "v1.0.0",
+      "v1.0",
+      "v1"
+    ]
+  },
+  "iagorobo24-hub/Listado-Materiales": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": [
+      "checkpoint/full-audit-before",
+      "checkpoint/WEB-HARD-01-before",
+      "checkpoint/WEB-HARD-01-after",
+      "checkpoint/VER-03-resumed-before",
+      "checkpoint/VER-03-before",
+      "checkpoint/VER-02-before",
+      "checkpoint/UIUX-V2-before",
+      "checkpoint/UIUX-V2-after",
+      "checkpoint/UIUX-1010-before",
+      "checkpoint/UIUX-1010-after",
+      "checkpoint/UIFIX-01-before",
+      "checkpoint/UIFIX-01-after",
+      "checkpoint/UI-REDESIGN-01-before",
+      "checkpoint/UI-REDESIGN-01-TASK-1-before",
+      "checkpoint/TEST-577-after",
+      "checkpoint/T-005-before",
+      "checkpoint/T-003-before",
+      "checkpoint/T-002-before",
+      "checkpoint/T-001-before",
+      "checkpoint/STAB-00-before",
+      "checkpoint/STAB-00-after",
+      "checkpoint/SEM-01-before",
+      "checkpoint/SEM-01-after",
+      "checkpoint/SEC-SQLITE-before",
+      "checkpoint/SEC-RET-01-before",
+      "checkpoint/SEC-EXCEL-before",
+      "checkpoint/SEC-01-before",
+      "checkpoint/ROADMAP-MVP-before",
+      "checkpoint/RES-03-before",
+      "checkpoint/RES-02-before",
+      "checkpoint/RES-01-before",
+      "checkpoint/REL-01-final",
+      "checkpoint/REL-01-before",
+      "checkpoint/REL-01-after",
+      "checkpoint/REACT-VITE-before",
+      "checkpoint/REACT-VITE-after",
+      "checkpoint/QLT-BASELINE-before",
+      "checkpoint/QLT-04-final",
+      "checkpoint/QLT-04-before",
+      "checkpoint/QLT-04-after",
+      "checkpoint/QLT-03-before",
+      "checkpoint/QLT-03-after",
+      "checkpoint/QLT-02-offline-before",
+      "checkpoint/QLT-02-SYSTEM-before",
+      "checkpoint/QLT-01-before",
+      "checkpoint/QLT-01-CI-before",
+      "checkpoint/PERF-UI-01-before",
+      "checkpoint/PERF-UI-01-after",
+      "checkpoint/P0-FIXES-before",
+      "checkpoint/P0-FIXES-after",
+      "checkpoint/OUT-02-before",
+      "checkpoint/OUT-01-before",
+      "checkpoint/OPS-03-before",
+      "checkpoint/OPS-02-before",
+      "checkpoint/OPS-01-before",
+      "checkpoint/NUC-CORE-before",
+      "checkpoint/NUC-CORE-after",
+      "checkpoint/NUC-13-before",
+      "checkpoint/NUC-13-after",
+      "checkpoint/MVP-REVALIDATION-before",
+      "checkpoint/MVP-HARDENING-before",
+      "checkpoint/MVP-AUDIT-before",
+      "checkpoint/MOD-02-before",
+      "checkpoint/MOD-01-before",
+      "checkpoint/LEVEL-D-before",
+      "checkpoint/LEVEL-D-after",
+      "checkpoint/JUD-02-before",
+      "checkpoint/JUD-01-before",
+      "checkpoint/HITL-01-before",
+      "checkpoint/GOV-DIRECT-MAIN-before",
+      "checkpoint/FINAL-DOCS-before",
+      "checkpoint/FE-JOURNEY-before",
+      "checkpoint/FE-JOURNEY-after",
+      "checkpoint/EXT-03-before",
+      "checkpoint/EXT-02-before",
+      "checkpoint/EXT-01-before",
+      "checkpoint/EVAL-REAL-before",
+      "checkpoint/EVAL-02-before",
+      "checkpoint/EVAL-02-after",
+      "checkpoint/ENV-01-before",
+      "checkpoint/DOCS-SYNC-after",
+      "checkpoint/DOC-SYNC-before",
+      "checkpoint/DOC-NIM-before",
+      "checkpoint/DEMO-01-before",
+      "checkpoint/CTO-ROADMAP-before",
+      "checkpoint/CTO-ROADMAP-after",
+      "checkpoint/CLEAN-SURFACE-before",
+      "checkpoint/CLEAN-SURFACE-after",
+      "checkpoint/CFG-01-before",
+      "checkpoint/CATALOG-04-before",
+      "checkpoint/CATALOG-04-after",
+      "checkpoint/CATALOG-03-before",
+      "checkpoint/CATALOG-03-after",
+      "checkpoint/CATALOG-02-before",
+      "checkpoint/CATALOG-02-after",
+      "checkpoint/CATALOG-01-before",
+      "checkpoint/CATALOG-01-after",
+      "checkpoint/CAD-01-before",
+      "checkpoint/CAD-01-after",
+      "checkpoint/BATCH3-before",
+      "checkpoint/BATCH3-after",
+      "checkpoint/BATCH2-before",
+      "checkpoint/BATCH2-after",
+      "checkpoint/AUTH-UI-after",
+      "checkpoint/AUDIT-IMPLEMENTATION-after",
+      "checkpoint/AUDIT-2.0-FEATURES-after",
+      "checkpoint/ASYNC-01-before",
+      "checkpoint/ASYNC-01-after",
+      "checkpoint/APP-01-local-before",
+      "checkpoint/API-HARD-before",
+      "checkpoint/API-HARD-after",
+      "checkpoint/ALL-AUDIT-FEATURES-after",
+      "archive/fix-post-audit-stabilization"
+    ]
+  },
+  "iagorobo24-hub/NexoDigital": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/OpenAMRobot_UI_Contribute": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/opencode-telegram-bot": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": [
+      "v0.24.0",
+      "v0.23.1",
+      "v0.23.0",
+      "v0.22.5",
+      "v0.22.4",
+      "v0.22.3",
+      "v0.22.2",
+      "v0.22.1",
+      "v0.22.0",
+      "v0.21.2",
+      "v0.21.1",
+      "v0.21.0",
+      "v0.20.6",
+      "v0.20.5",
+      "v0.20.4",
+      "v0.20.3",
+      "v0.20.2",
+      "v0.20.1",
+      "v0.20.0",
+      "v0.19.3",
+      "v0.19.2",
+      "v0.19.1",
+      "v0.19.0",
+      "v0.18.0",
+      "v0.17.0",
+      "v0.16.1",
+      "v0.16.0",
+      "v0.15.0",
+      "v0.14.1",
+      "v0.14.0",
+      "v0.13.2",
+      "v0.13.1",
+      "v0.13.0",
+      "v0.12.1",
+      "v0.12.0",
+      "v0.11.4",
+      "v0.11.3",
+      "v0.11.2",
+      "v0.11.1",
+      "v0.11.0",
+      "v0.10.1",
+      "v0.10.0",
+      "v0.9.2",
+      "v0.9.1",
+      "v0.9.0",
+      "v0.8.0",
+      "v0.7.0",
+      "v0.6.1",
+      "v0.6.1-rc.1",
+      "v0.6.0",
+      "v0.5.0",
+      "v0.4.0",
+      "v0.3.0",
+      "v0.2.1",
+      "v0.2.0",
+      "v0.1.1",
+      "v0.1.0"
+    ]
+  },
+  "iagorobo24-hub/PC-Ops": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/pokemon-auction-house": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/portfolio": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/portfolio-3D": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": []
+  },
+  "iagorobo24-hub/project-system-map": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": [
+      "v1.0.0"
+    ]
+  },
+  "iagorobo24-hub/proyecto-pfc-iago-duran": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
+    "tags_seen": [
+      "v3.0.0",
+      "v2.0.0"
+    ]
+  },
+  "iagorobo24-hub/Proyecto_MAMA": {
+    "since": "2026-08-25T10:54:44.629386+00:00",
     "tags_seen": []
   }
 }

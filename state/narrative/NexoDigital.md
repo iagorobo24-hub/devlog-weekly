@@ -1,0 +1,1 @@
+Semana inaugural con un intenso desarrollo en NexoDigital. Se destacan la implementación de subida y gestión de materiales de proyectos, mejoras de seguridad y refactorizaciones en la gestión de materiales, junto con mejoras en integraciones con Supabase y Stripe. Correcciones en varios componentes y pruebas también fueron clave. **Historial Semanal 1 (18-25 Ago 2026)**

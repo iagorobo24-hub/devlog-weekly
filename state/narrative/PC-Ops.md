@@ -1,0 +1,1 @@
+Semana 1 (18-25 Ago 2026): Inicio del proyecto con enfoque en seguridad y documentación. Se implementaron políticas de CI remoto para AI y Claude, se corrigieron vulnerabilidades en Gates 2 y 3, se reconciliaron contratos y se estableció la baseline de PC-Ops. Total de 6 commits, 2919 líneas agregadas y 736 eliminadas en 15 archivos.

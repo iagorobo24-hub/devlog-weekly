@@ -1,0 +1,1 @@
+Semana 1 (18-25 de agosto de 2026): Lanzamiento de v1.0.0 con foco en trackabilidad de Git, hardenimiento de mantenimiento y CI, mejoras en tooling y correcciones de validación. Se realizaron 26 commits, modificando 58 archivos, con 6461 adiciones y 3153 eliminaciones. No hubo issues o PRs cerradas reportados.

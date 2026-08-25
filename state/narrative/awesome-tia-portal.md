@@ -1,0 +1,1 @@
+Semana 1 (18-25 Ago 2026): Inicio del proyecto con enfoque en documentación de CI para integración de inteligencia artificial. Se agregaron instrucciones para Claude y se definió la política para agentes de IA, con 2 commits, 2 archivos modificados, 20 líneas agregadas y sin eliminaciones.

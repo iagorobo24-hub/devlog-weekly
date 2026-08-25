@@ -1,0 +1,1 @@
+Semana 1: Inicio del seguimiento con un período de alta actividad. Se destacan avances en funcionalidades alpha, seguridad, cierre de tareas clave y una significativa mejora en la documentación y gestión del proyecto. El proyecto muestra un ritmo rápido de desarrollo con enfoque en la estabilidad y la documentación.

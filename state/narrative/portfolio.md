@@ -1,0 +1,1 @@
+Semana 1 (2026-08-18 a 2026-08-25): Inicio del proyecto con una semana de alta actividad. Se han realizado 9 commits que incluyen el rediseño completo del portfolio hacia un formato 3D industrial, mejoras de UX, integración de analíticas y correcciones de estabilidad. Se han modificado 71 archivos, con 6092 adiciones y 2799 eliminaciones. No se han cerrado issues ni PRs.

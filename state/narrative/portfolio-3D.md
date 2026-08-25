@@ -1,0 +1,1 @@
+Semana 1 (2026-08-18 a 2026-08-25): Inicio del proyecto con enfoque en documentación de integraciones de CI para herramientas AI (Claude y Agente AI), sin issues o PRs cerrados. Se agregaron 20 líneas de código en 2 archivos, sin eliminaciones.
