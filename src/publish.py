@@ -1,9 +1,10 @@
-"""deck -> Drive. Sube out/deck.pdf (o out/portfolio.pdf) a Google Drive vía rclone.
+"""deck -> Drive. Sube out/deck.pdf (o out/portfolio.pdf/.mp4) a Google Drive vía rclone.
 
 Sigue la estructura del skeleton:
     Portfolio/
     ├── semanal/<ISO-week>/devlog.pdf
     ├── master/portfolio.pdf
+    ├── master/portfolio.mp4
     └── assets/
 
 --target semanal (por defecto) sube out/deck.pdf. La semana se calcula a
@@ -11,9 +12,12 @@ partir de "generated_at" en out/summaries.json, no de la fecha de hoy: así
 el destino es determinista a partir de los datos que ya recogió el
 pipeline, no de cuándo por casualidad se ejecuta publish.py.
 
---target master sube out/portfolio.pdf a Portfolio/master/portfolio.pdf. Si
-ese archivo no existe (render_master.py decidió saltarse esta semana por el
-umbral de actividad), no es un error: se loguea y se sale sin más.
+--target master sube out/portfolio.pdf a Portfolio/master/portfolio.pdf, y
+out/portfolio.mp4 (si existe) a Portfolio/master/portfolio.mp4 — el vídeo
+narrado que genera render_video.py. Cada archivo se evalúa por separado: si
+no existe (render_master.py / render_video.py decidieron saltarse esta
+semana por el umbral de actividad), no es un error, solo se loguea y se
+sigue con el resto.
 
 Necesita:
 - rclone en el PATH.
@@ -50,6 +54,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SUMMARIES_PATH = ROOT / "out" / "summaries.json"
 DECK_PDF_PATH = ROOT / "out" / "deck.pdf"
 PORTFOLIO_PDF_PATH = ROOT / "out" / "portfolio.pdf"
+PORTFOLIO_MP4_PATH = ROOT / "out" / "portfolio.mp4"
 
 DEFAULT_REMOTE = os.environ.get("RCLONE_REMOTE", "gdrive")
 
@@ -76,6 +81,10 @@ def weekly_remote_path(remote: str, week: str) -> str:
 
 def master_remote_path(remote: str) -> str:
     return f"{remote}:Portfolio/master/portfolio.pdf"
+
+
+def master_video_remote_path(remote: str) -> str:
+    return f"{remote}:Portfolio/master/portfolio.mp4"
 
 
 def upload(local_path: Path, dest: str, rclone_conf: str) -> None:
@@ -108,21 +117,28 @@ def main() -> None:
     args = parse_args()
 
     if args.target == "master":
-        local_path = PORTFOLIO_PDF_PATH
-        if not local_path.exists():
-            log.info("%s no existe (el deck maestro no se generó esta semana); nada que publicar", local_path)
-            return
-        dest = master_remote_path(args.remote)
+        uploads = []
+        if PORTFOLIO_PDF_PATH.exists():
+            uploads.append((PORTFOLIO_PDF_PATH, master_remote_path(args.remote)))
+        else:
+            log.info("%s no existe (el deck maestro no se generó esta semana); nada que publicar", PORTFOLIO_PDF_PATH)
+        if PORTFOLIO_MP4_PATH.exists():
+            uploads.append((PORTFOLIO_MP4_PATH, master_video_remote_path(args.remote)))
+        else:
+            log.info("%s no existe (el vídeo no se generó esta semana); nada que publicar", PORTFOLIO_MP4_PATH)
     else:
-        local_path = DECK_PDF_PATH
-        if not local_path.exists():
-            log.error("%s no existe; corre render.py primero", local_path)
+        if not DECK_PDF_PATH.exists():
+            log.error("%s no existe; corre render.py primero", DECK_PDF_PATH)
             sys.exit(1)
         week = iso_week_folder(load_generated_at())
-        dest = weekly_remote_path(args.remote, week)
+        uploads = [(DECK_PDF_PATH, weekly_remote_path(args.remote, week))]
 
     if args.dry_run:
-        log.info("dry-run: subiría %s -> %s", local_path, dest)
+        for local_path, dest in uploads:
+            log.info("dry-run: subiría %s -> %s", local_path, dest)
+        return
+
+    if not uploads:
         return
 
     rclone_conf = os.environ.get("RCLONE_CONF")
@@ -130,12 +146,13 @@ def main() -> None:
         log.error("falta la variable de entorno RCLONE_CONF")
         sys.exit(1)
 
-    try:
-        upload(local_path, dest, rclone_conf)
-    except subprocess.CalledProcessError as e:
-        log.error("rclone falló subiendo a %s (código %d)", dest, e.returncode)
-        sys.exit(1)
-    log.info("subido %s -> %s", local_path, dest)
+    for local_path, dest in uploads:
+        try:
+            upload(local_path, dest, rclone_conf)
+        except subprocess.CalledProcessError as e:
+            log.error("rclone falló subiendo a %s (código %d)", dest, e.returncode)
+            sys.exit(1)
+        log.info("subido %s -> %s", local_path, dest)
 
 
 if __name__ == "__main__":

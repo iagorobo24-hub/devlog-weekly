@@ -15,18 +15,23 @@ repos:
     showcase: false
   - name: iagorobo24-hub/Autotrader
     showcase: true
+    pitch: "Bot de trading algorítmico en Python sobre Alpaca, con gestión de riesgo, backtesting y pipeline de ML"
   - name: iagorobo24-hub/Autotrader-con-IA
     showcase: true
+    pitch: "Analista de inversiones con LLMs: filtros cuantitativos, agentes en LangGraph y briefings diarios"
   - name: iagorobo24-hub/awesome-tia-portal
     showcase: true
+    pitch: "Librería awesome de bloques, UDTs y plantillas reutilizables para Siemens TIA Portal"
   - name: iagorobo24-hub/business-building
     showcase: false
   - name: iagorobo24-hub/Chatbot_WhatsApp
     showcase: false
   - name: iagorobo24-hub/Freebuff-telegram-bot
     showcase: true
+    pitch: "Bot de Telegram para controlar un asistente de IA en terminal: sesiones tmux, prompts async y selección de modelo"
   - name: iagorobo24-hub/Listado-Materiales
     showcase: true
+    pitch: "Extracción automática de listados de materiales (BOM) desde PDFs técnicos eléctricos e industriales"
   - name: iagorobo24-hub/NexoDigital
     showcase: false
   - name: iagorobo24-hub/OpenAMRobot_UI_Contribute
@@ -37,6 +42,7 @@ repos:
     showcase: false
   - name: iagorobo24-hub/pokemon-auction-house
     showcase: true
+    pitch: "Plataforma de subastas de coleccionables Pokémon: pujas en tiempo real, custodia y pagos vía Stripe"
   - name: iagorobo24-hub/portfolio
     showcase: false
   - name: iagorobo24-hub/portfolio-3D
@@ -45,5 +51,6 @@ repos:
     showcase: false
   - name: iagorobo24-hub/proyecto-pfc-iago-duran
     showcase: true
+    pitch: "Suite web académica para el sector eléctrico y logístico: 7 herramientas con asistencia de IA en una SPA"
   - name: iagorobo24-hub/Proyecto_MAMA
     showcase: false

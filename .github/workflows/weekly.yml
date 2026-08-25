@@ -23,6 +23,9 @@ jobs:
       - name: Instalar rclone
         run: curl https://rclone.org/install.sh | sudo bash
 
+      - name: Instalar ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Recoger
         run: uv run python src/collect.py
         env:
@@ -56,7 +59,14 @@ jobs:
         # salta solo si ningún repo showcase tuvo actividad.
         run: uv run python src/render_master.py
 
+      - name: Renderizar vídeo del deck maestro
+        # Lee out/portfolio.md (lo acaba de escribir el paso anterior) y
+        # narra cada slide con edge-tts. Mismo umbral que render_master.py,
+        # así que se salta sola si ese paso también se saltó.
+        run: uv run python src/render_video.py
+
       - name: Publicar deck maestro
+        # Sube out/portfolio.pdf y, si se generó, out/portfolio.mp4.
         run: uv run python src/publish.py --target master
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
