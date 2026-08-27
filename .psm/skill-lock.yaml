@@ -1,0 +1,38 @@
+lock_version: 1
+framework_version: 0.2.0-alpha
+framework_source_commit: ee46f5bf6d8c6809621f7b4b9fcddee90037bc52
+generated_at: '2026-08-27T22:49:38Z'
+skills:
+  psm-before-change:
+    canonical_path: skills/psm-before-change/SKILL.md
+    canonical_sha256: 7c4d951aa7a1edf28680edb9fbbc4dda4078d0c01b56b586aca16689413f8bc7
+    installed_instances:
+    - destination: .agents/skills/psm-before-change/SKILL.md
+      adapted_sha256: d59e24e21b05ea358cb32ace0ae6edf70e75f4598f26358c81e3da297d426b40
+  psm-host-docs:
+    canonical_path: skills/psm-host-docs/SKILL.md
+    canonical_sha256: c199dd22de1d9d35b5b66b754d6f229f59b36e620459e1a8d4e99d765f9879c2
+    installed_instances:
+    - destination: .agents/skills/psm-host-docs/SKILL.md
+      adapted_sha256: 5d9a1e4632453c2acda20c836d859c114fb4318134d92da7033307dd06d81c65
+  psm-maintain:
+    canonical_path: skills/psm-maintain/SKILL.md
+    canonical_sha256: c37e5b1a1d39f359115fa8035df623eca0d512f084120ca8f96a4d00b5bd68b7
+    installed_instances:
+    - destination: .agents/skills/psm-maintain/SKILL.md
+      adapted_sha256: d526a3ae972b9c2c1fe3c922d8c883e835de13877aa1eed96d1131c6f9e00499
+  psm-orient:
+    canonical_path: skills/psm-orient/SKILL.md
+    canonical_sha256: a6424e848bf11fcfe5b7966da363fdc0777edf1202a23a8adb5603e41d44a01d
+    installed_instances:
+    - destination: .agents/skills/psm-orient/SKILL.md
+      adapted_sha256: df711f22539c5af01c90e51281be784f9c5acc37dfa27e5e05ddfe256f30e6c5
+  psm-validate:
+    canonical_path: skills/psm-validate/SKILL.md
+    canonical_sha256: 45c7afcfdfbf1b4fe4d49997a7623fae14dc19f5dc6bc479bd360bfcf4aa9c68
+    installed_instances:
+    - destination: .agents/skills/psm-validate/SKILL.md
+      adapted_sha256: 132519c7f213e2f9e7b749751bbc59b8fa562bc62e9dd61e2d995cfb803f33b5
+managed_blocks:
+- file: AGENTS.md
+  block_sha256: 0ee52c65024101feaafb262c139f77115c05b92ada39b947c5fec9c31679ec3e

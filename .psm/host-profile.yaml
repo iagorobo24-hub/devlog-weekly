@@ -1,0 +1,10 @@
+schema_version: "0.2.0-alpha"
+framework_compatibility:
+  min_version: "0.2.0-alpha"
+skill_destinations:
+  - path: ".agents/skills"
+    mode: "adapt"
+governance:
+  instruction_files:
+    - path: "AGENTS.md"
+      marker_style: "html_comment"
