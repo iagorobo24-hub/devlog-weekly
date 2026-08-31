@@ -1,38 +1,38 @@
 {
   "iagorobo24-hub/GestionaB2B": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/AUTOMATON": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/automaton-landing": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/Autotrader": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/Autotrader-con-IA": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/awesome-tia-portal": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/business-building": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/Chatbot_WhatsApp": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/Freebuff-telegram-bot": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": [
       "v1.3.0",
       "v1.0.0",
@@ -41,7 +41,7 @@
     ]
   },
   "iagorobo24-hub/Listado-Materiales": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": [
       "checkpoint/full-audit-before",
       "checkpoint/WEB-HARD-01-before",
@@ -62,12 +62,17 @@
       "checkpoint/T-003-before",
       "checkpoint/T-002-before",
       "checkpoint/T-001-before",
+      "checkpoint/STAB-PSM-01-after",
       "checkpoint/STAB-00-before",
       "checkpoint/STAB-00-after",
       "checkpoint/SEM-01-before",
       "checkpoint/SEM-01-after",
       "checkpoint/SEC-SQLITE-before",
       "checkpoint/SEC-RET-01-before",
+      "checkpoint/SEC-GOV-01-before",
+      "checkpoint/SEC-GOV-01-after",
+      "checkpoint/SEC-GOV-01-DECISIONS-before",
+      "checkpoint/SEC-GOV-01-DECISIONS-after",
       "checkpoint/SEC-EXCEL-before",
       "checkpoint/SEC-01-before",
       "checkpoint/ROADMAP-MVP-before",
@@ -79,6 +84,8 @@
       "checkpoint/REL-01-after",
       "checkpoint/REACT-VITE-before",
       "checkpoint/REACT-VITE-after",
+      "checkpoint/QLT-SYSTEM-01-before",
+      "checkpoint/QLT-SYSTEM-01-after",
       "checkpoint/QLT-BASELINE-before",
       "checkpoint/QLT-04-final",
       "checkpoint/QLT-04-before",
@@ -95,6 +102,10 @@
       "checkpoint/P0-FIXES-after",
       "checkpoint/OUT-02-before",
       "checkpoint/OUT-01-before",
+      "checkpoint/OPS-HEALTH-01-before",
+      "checkpoint/OPS-HEALTH-01-after",
+      "checkpoint/OPS-DATA-01-before",
+      "checkpoint/OPS-DATA-01-after",
       "checkpoint/OPS-03-before",
       "checkpoint/OPS-02-before",
       "checkpoint/OPS-01-before",
@@ -111,8 +122,11 @@
       "checkpoint/LEVEL-D-after",
       "checkpoint/JUD-02-before",
       "checkpoint/JUD-01-before",
+      "checkpoint/HITL-02-after",
       "checkpoint/HITL-01-before",
       "checkpoint/GOV-DIRECT-MAIN-before",
+      "checkpoint/GOLDEN-RECONCILIATION-before",
+      "checkpoint/GOLDEN-RECONCILIATION-after",
       "checkpoint/FINAL-DOCS-before",
       "checkpoint/FE-JOURNEY-before",
       "checkpoint/FE-JOURNEY-after",
@@ -122,8 +136,22 @@
       "checkpoint/EVAL-REAL-before",
       "checkpoint/EVAL-02-before",
       "checkpoint/EVAL-02-after",
+      "checkpoint/EVAL-02-REAL-rerun-before",
+      "checkpoint/EVAL-02-REAL-rerun-after",
+      "checkpoint/EVAL-02-REAL-fallback-before",
+      "checkpoint/EVAL-02-REAL-fallback-after",
+      "checkpoint/EVAL-02-REAL-before",
+      "checkpoint/EVAL-02-REAL-after",
+      "checkpoint/EVAL-02-REAL-2026-08-30-classification-before",
+      "checkpoint/EVAL-02-REAL-2026-08-30-classification-after",
+      "checkpoint/EVAL-02-REAL-2026-08-30-after",
+      "checkpoint/EVAL-02-REAL-2026-08-29-before",
+      "checkpoint/ENV-FE-01-before",
+      "checkpoint/ENV-FE-01-after",
       "checkpoint/ENV-01-before",
       "checkpoint/DOCS-SYNC-after",
+      "checkpoint/DOC-TRUTH-01-before",
+      "checkpoint/DOC-TRUTH-01-after",
       "checkpoint/DOC-SYNC-before",
       "checkpoint/DOC-NIM-before",
       "checkpoint/DEMO-01-before",
@@ -159,15 +187,15 @@
     ]
   },
   "iagorobo24-hub/NexoDigital": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/OpenAMRobot_UI_Contribute": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/opencode-telegram-bot": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": [
       "v0.24.0",
       "v0.23.1",
@@ -229,36 +257,36 @@
     ]
   },
   "iagorobo24-hub/PC-Ops": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/pokemon-auction-house": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/portfolio": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/portfolio-3D": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/project-system-map": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": [
       "v1.0.0"
     ]
   },
   "iagorobo24-hub/proyecto-pfc-iago-duran": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": [
       "v3.0.0",
       "v2.0.0"
     ]
   },
   "iagorobo24-hub/Proyecto_MAMA": {
-    "since": "2026-08-25T20:32:55.070809+00:00",
+    "since": "2026-08-31T14:38:32.972001+00:00",
     "tags_seen": []
   }
 }
