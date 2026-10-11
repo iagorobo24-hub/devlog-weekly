@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 440" width="1280" height="440" role="img" aria-labelledby="t d">
+  <title id="t">Orden de los pasos del workflow</title>
+  <desc id="d">Diez pasos del workflow semanal. El estado de state/ solo se confirma después de publicar el PDF semanal y se guarda en git al final.</desc>
+  <defs>
+    <marker id="ar" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M1 1 L10 6 L1 11 Z" fill="#7d8590"/>
+    </marker>
+    <linearGradient id="hd" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#58a6ff"/><stop offset="1" stop-color="#3fb950"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="440" rx="20" fill="#0d1117"/>
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+    <text x="48" y="58" font-size="26" font-weight="800" fill="#f0f6fc">El estado se confirma al final</text>
+    <rect x="48" y="68" width="64" height="4" rx="2" fill="url(#hd)"/>
+
+    <g font-size="15" fill="#c9d1d9">
+      <rect x="40" y="100" width="216" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="58" y="130" font-size="14" font-weight="800" fill="#58a6ff">1</text><text x="78" y="130" font-weight="700" fill="#f0f6fc">Preparar</text>
+      <text x="58" y="156" font-size="13" fill="#9fb0c3">uv, Marp, rclone, ffmpeg</text>
+
+      <rect x="296" y="100" width="216" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="314" y="130" font-size="14" font-weight="800" fill="#58a6ff">2</text><text x="334" y="130" font-weight="700" fill="#f0f6fc">Recoger</text>
+      <text x="314" y="156" font-size="13" fill="#9fb0c3">out/collected.json</text>
+
+      <rect x="552" y="100" width="216" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="570" y="130" font-size="14" font-weight="800" fill="#58a6ff">3</text><text x="590" y="130" font-weight="700" fill="#f0f6fc">Sintetizar</text>
+      <text x="570" y="156" font-size="13" fill="#9fb0c3">out/summaries.json</text>
+
+      <rect x="808" y="100" width="216" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="826" y="130" font-size="14" font-weight="800" fill="#58a6ff">4</text><text x="846" y="130" font-weight="700" fill="#f0f6fc">Renderizar</text>
+      <text x="826" y="156" font-size="13" fill="#9fb0c3">out/deck.pdf</text>
+
+      <rect x="1064" y="100" width="176" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="1082" y="130" font-size="14" font-weight="800" fill="#58a6ff">5</text><text x="1102" y="130" font-weight="700" fill="#f0f6fc">Publicar</text>
+      <text x="1082" y="156" font-size="13" fill="#9fb0c3">PDF semanal a Drive</text>
+    </g>
+    <g stroke="#7d8590" stroke-width="2" fill="none" marker-end="url(#ar)">
+      <line x1="256" y1="146" x2="292" y2="146"/>
+      <line x1="512" y1="146" x2="548" y2="146"/>
+      <line x1="768" y1="146" x2="804" y2="146"/>
+      <line x1="1024" y1="146" x2="1060" y2="146"/>
+      <path d="M1152 192 V224 H148 V252"/>
+    </g>
+
+    <g font-size="15" fill="#c9d1d9">
+      <rect x="40" y="256" width="216" height="92" rx="12" fill="#10241a" stroke="#3fb950" stroke-width="2"/>
+      <text x="58" y="286" font-size="14" font-weight="800" fill="#3fb950">6</text><text x="78" y="286" font-weight="700" fill="#f0f6fc">Confirmar estado</text>
+      <text x="58" y="312" font-size="13" fill="#9fb0c3">collect y synthesize</text>
+      <text x="58" y="330" font-size="13" fill="#9fb0c3">--commit-state</text>
+
+      <rect x="296" y="256" width="216" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="314" y="286" font-size="14" font-weight="800" fill="#58a6ff">7</text><text x="334" y="286" font-weight="700" fill="#f0f6fc">Deck maestro</text>
+      <text x="314" y="312" font-size="13" fill="#9fb0c3">out/portfolio.pdf</text>
+
+      <rect x="552" y="256" width="216" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="570" y="286" font-size="14" font-weight="800" fill="#58a6ff">8</text><text x="590" y="286" font-weight="700" fill="#f0f6fc">Vídeo del maestro</text>
+      <text x="570" y="312" font-size="13" fill="#9fb0c3">out/portfolio.mp4</text>
+
+      <rect x="808" y="256" width="216" height="92" rx="12" fill="#161b22" stroke="#30363d"/>
+      <text x="826" y="286" font-size="14" font-weight="800" fill="#58a6ff">9</text><text x="846" y="286" font-weight="700" fill="#f0f6fc">Publicar maestro</text>
+      <text x="826" y="312" font-size="13" fill="#9fb0c3">PDF y vídeo a Drive</text>
+
+      <rect x="1064" y="256" width="176" height="92" rx="12" fill="#10241a" stroke="#3fb950" stroke-width="2"/>
+      <text x="1082" y="286" font-size="14" font-weight="800" fill="#3fb950">10</text><text x="1106" y="286" font-weight="700" fill="#f0f6fc">Guardar</text>
+      <text x="1082" y="312" font-size="13" fill="#9fb0c3">git commit de state/</text>
+      <text x="1082" y="330" font-size="13" fill="#9fb0c3">y push</text>
+    </g>
+    <g stroke="#7d8590" stroke-width="2" marker-end="url(#ar)">
+      <line x1="256" y1="302" x2="292" y2="302"/>
+      <line x1="512" y1="302" x2="548" y2="302"/>
+      <line x1="768" y1="302" x2="804" y2="302"/>
+      <line x1="1024" y1="302" x2="1060" y2="302"/>
+    </g>
+
+    <text x="48" y="388" font-size="15" fill="#c9d1d9">Los pasos 2 a 5 no tocan <tspan font-weight="700" fill="#f0f6fc">state/</tspan>: si uno falla, el job se detiene y la ventana de la semana sigue intacta.</text>
+    <text x="48" y="414" font-size="15" fill="#c9d1d9">El historial (<tspan font-weight="700" fill="#f0f6fc">last_run.json</tspan> y <tspan font-weight="700" fill="#f0f6fc">narrative/</tspan>) se escribe tras publicar y solo se sube a git en el último paso.</text>
+  </g>
+</svg>

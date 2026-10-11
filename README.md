@@ -1,0 +1,177 @@
+<div align="center">
+
+<img src="docs/img/banner.svg" alt="devlog-weekly: de los commits de la semana a un deck de portfolio" width="100%">
+
+<br>
+
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-cron%20semanal-2088FF?logo=githubactions&logoColor=white)
+![Marp](https://img.shields.io/badge/Marp-PDF-0288D1)
+![NVIDIA NIM](https://img.shields.io/badge/LLM-NVIDIA%20NIM-76B900?logo=nvidia&logoColor=white)
+![Estado](https://img.shields.io/badge/estado-uso%20personal-F5A623)
+
+**Cada lunes lee la actividad de tus repositorios de GitHub, la resume con un modelo de lenguaje
+y genera un deck semanal en PDF, más un deck «maestro» de portfolio con vídeo narrado.**
+Corre en GitHub Actions y sube los resultados a Google Drive.
+
+[Qué hace](#qué-hace) ·
+[Cómo funciona](#cómo-funciona) ·
+[Estado](#estado-del-proyecto) ·
+[Inicio rápido](#inicio-rápido) ·
+[Configuración](#configuración) ·
+[Límites](#límites-conocidos)
+
+</div>
+
+---
+
+## Qué hace
+
+| | |
+|---|---|
+| 📥 **Recoge** | Por cada repo de `config/repos.yml`: commits, estadísticas de diff, issues y PRs cerrados, tags nuevos, lenguajes y el arranque del README. Sin IA. |
+| 🧠 **Resume** | Una llamada al modelo por repo con actividad, con el historial ya contado para que escriba *qué cambió* y no *qué es el proyecto*. |
+| 📄 **Deck semanal** | Plantilla fija (Jinja2 + Marp) con el texto del modelo: un PDF con los avances de la semana. |
+| 🗂️ **Deck maestro** | Un portfolio permanente con una slide por repo marcado como `showcase`, a partir de su narrativa acumulada. |
+| 🎙️ **Vídeo narrado** | Las slides del deck maestro con voz sintética (edge-tts) unidas con ffmpeg en un `.mp4`. |
+| ☁️ **Publica** | Sube los PDF y el vídeo a Google Drive con `rclone`, en carpetas por semana ISO. |
+
+Pensado para quien mantiene varios repositorios y quiere un registro semanal y un portfolio al día sin
+escribirlos a mano. Es un proyecto personal: la configuración incluida apunta a los repositorios de su autor.
+
+## Cómo funciona
+
+<img src="docs/img/pipeline.svg" alt="Cadena semanal: recoger, sintetizar, renderizar y publicar. Cadena del deck maestro: maquetar, vídeo narrado y publicar" width="100%">
+
+Cada script lee un fichero y escribe otro, así que cualquier paso se puede ejecutar suelto mientras se desarrolla.
+
+### Orden del workflow y estado
+
+<img src="docs/img/estado.svg" alt="Los diez pasos del workflow; el estado se confirma después de publicar y se guarda en git al final" width="100%">
+
+El estado (`state/last_run.json` y `state/narrative/*.md`) no se actualiza al recoger ni al sintetizar, sino con
+`--commit-state` después de publicar. Si algo falla antes, el workflow se detiene y la semana se puede reintentar sin
+perder la ventana ni duplicar narrativa.
+
+## Estado del proyecto
+
+| Pieza | Estado | Nota |
+|---|:---:|---|
+| Recolección desde la API de GitHub | 🟡 | Implementada; el repositorio no incluye tests. |
+| Síntesis con LLM (cadena de modelos de NVIDIA NIM) | 🟡 | Implementada. Solo se comprueba que la respuesta traiga las cuatro claves esperadas; no se valida el contenido. |
+| Deck semanal (Marp → PDF) | 🟡 | Implementado; sin tests. |
+| Deck maestro y vídeo narrado | 🟡 | Implementados, con umbral de actividad; sin tests. |
+| Publicación en Drive con rclone | 🟡 | Implementada; depende de un `rclone.conf` con OAuth propio. |
+| Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El repositorio solo guarda commits de estado de las semanas 2026-W35 y W36; no se ha comprobado el resultado de ejecuciones posteriores. |
+| Tests automáticos | 🚧 | No hay suite de tests ni CI de verificación. |
+
+✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. Ninguna pieza está marcada como probada
+porque el repositorio no aporta pruebas automáticas.
+
+## Inicio rápido
+
+Requisitos para ejecutarlo en local: **Python 3.11+**, [`uv`](https://docs.astral.sh/uv/), y según el paso:
+[Marp CLI](https://github.com/marp-team/marp-cli) (PDF), `ffmpeg` y `ffprobe` (vídeo) y `rclone` (publicar).
+
+```bash
+uv sync
+export GH_PAT=...            # token de GitHub con acceso de lectura a los repos de la lista
+uv run python src/collect.py --since 7d     # escribe out/collected.json
+uv run python src/synthesize.py --dry-run   # solo imprime los prompts, sin llamar al modelo
+```
+
+`synthesize.py --dry-run` no necesita `NVIDIA_API_KEY` y es la forma segura de ver qué se enviaría al modelo.
+Para ejecutarlo de verdad, define `NVIDIA_API_KEY` y quita `--dry-run`.
+
+<details>
+<summary><b>Resto de pasos y opciones</b></summary>
+
+```bash
+uv run python src/synthesize.py                 # out/summaries.json (--repo NOMBRE, --model ID, --no-state)
+uv run python src/render.py --no-pdf            # solo out/deck.md; sin --no-pdf genera out/deck.pdf con Marp
+uv run python src/publish.py --dry-run          # muestra el destino en Drive sin subir nada
+uv run python src/render_master.py --force      # deck maestro ignorando el umbral (--no-pdf para solo Markdown)
+uv run python src/render_video.py --force       # vídeo narrado (--voice es-ES-AlvaroNeural por defecto)
+uv run python src/publish.py --target master    # sube portfolio.pdf y portfolio.mp4 si existen
+```
+
+Los comandos `--commit-state` (`collect.py` y `synthesize.py`) confirman el estado a partir de `out/`; en el workflow
+se ejecutan tras publicar. Ojo: escriben en `state/`.
+
+</details>
+
+<details>
+<summary><b>Ponerlo en marcha en tu propia cuenta (GitHub Actions)</b></summary>
+
+1. Haz un fork o copia del repositorio y edita `config/repos.yml` con tus repos (`showcase: true` y `pitch` a mano
+   para los de escaparate; esa decisión no la toma el modelo).
+2. Añade los secretos del repositorio: `GH_PAT`, `NVIDIA_API_KEY` y `RCLONE_CONF` (contenido de un `rclone.conf` con
+   un remote de Google Drive ya autorizado; el nombre del remote por defecto es `gdrive`, o `RCLONE_REMOTE`).
+3. Lanza el workflow `devlog semanal` a mano (`workflow_dispatch`) antes de fiarte del cron.
+
+El workflow necesita permiso `contents: write` para guardar `state/`.
+
+</details>
+
+## Configuración
+
+| Dónde | Para qué |
+|---|---|
+| `config/repos.yml` | Repos a seguir, `defaults.since_days` (ventana de la primera ejecución, 7 por defecto), `showcase` y `pitch`. |
+| `GH_PAT` | Token de GitHub para leer los repos (con repos privados hace falta uno con acceso). |
+| `NVIDIA_API_KEY` | Clave de NVIDIA NIM (API compatible con OpenAI). `NIM_MODEL` o `--model` fuerzan un único modelo. |
+| `RCLONE_CONF`, `RCLONE_REMOTE` | Configuración de rclone y nombre del remote de Drive. |
+| `templates/` | Plantillas Jinja2 de los decks y tema Marp `theme.css`. |
+
+Los secretos van en variables de entorno o en los secretos de Actions, nunca en el repositorio.
+
+## Límites conocidos
+
+- **Sin tests ni verificación automática.** No hay suite de pruebas; los scripts no se han validado de forma automatizada.
+- **El texto lo escribe un modelo y nadie lo revisa.** Las narrativas y los titulares pueden contener errores o
+  valoraciones no respaldadas por los commits. Revísalos antes de enseñarlos o publicarlos.
+- **Qué sale de tu máquina.** Al sintetizar se envían a NVIDIA NIM el título de los commits, issues y PRs, los tags y
+  la narrativa acumulada; con un `GH_PAT` que vea repos privados, eso incluye datos de repos privados. La narración del
+  vídeo se envía al servicio de edge-tts (Microsoft) y el tema Marp carga fuentes de Google Fonts. El resultado se sube a
+  tu Drive.
+- **El modelo ve títulos, no diffs.** Recibe los títulos de commits y las cifras agregadas, no el código.
+- **Un fallo de síntesis en un repo lo omite** del resumen; el resto sigue.
+- **Dependencia de servicios externos.** Los modelos listados pueden no estar habilitados para tu cuenta de NIM; si
+  uno falla, se prueba el siguiente de la cadena.
+- **El estado se guarda al final.** Si falla un paso después de confirmar el estado (deck maestro, vídeo, publicación
+  maestra), el último paso de guardado no llega a ejecutarse y esa ventana se repetiría la semana siguiente.
+- **Sin gestión explícita de límites de tasa** de la API de GitHub en `collect.py`.
+- **Sin licencia.** El repositorio no incluye un archivo de licencia.
+
+## Estructura del proyecto
+
+```
+src/
+  collect.py        GitHub API -> out/collected.json (sin IA)
+  synthesize.py     JSON + historial -> out/summaries.json (llamada al LLM)
+  render.py         summaries -> out/deck.md -> out/deck.pdf (Marp)
+  render_master.py  narrativas de los repos showcase -> out/portfolio.pdf
+  render_video.py   portfolio -> out/portfolio.mp4 (edge-tts + ffmpeg)
+  publish.py        PDF / vídeo -> Google Drive (rclone)
+templates/          deck.md.j2, portfolio.md.j2 y tema theme.css
+config/repos.yml    repos a seguir
+state/              last_run.json y narrative/*.md, versionados por el workflow
+.github/workflows/  weekly.yml (cron semanal)
+docs/               gráficos del README y mapa del sistema (PSM)
+```
+
+## Documentación
+
+- [`AGENTS.md`](AGENTS.md): directrices para agentes de IA que trabajan en el repositorio.
+- [`docs/system-map/README.md`](docs/system-map/README.md): mapa del sistema (Project System Map). Parte de su contenido
+  describe intenciones de diseño que no están todas implementadas.
+- [`devlog-weekly-skeleton.md`](devlog-weekly-skeleton.md): brief original de diseño; algunas decisiones han cambiado
+  (por ejemplo, el modelo usado ahora es NVIDIA NIM y no Anthropic).
+
+---
+
+<div align="center">
+
+<sub>Proyecto personal. Las narrativas generadas por IA no están verificadas: revísalas antes de usarlas.</sub>
+
+</div>
