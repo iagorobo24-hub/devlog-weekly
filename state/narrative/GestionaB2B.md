@@ -1,1 +1,0 @@
-Primera semana de seguimiento con un intenso desarrollo en GestionaB2B, destacando avances en seguridad, infraestructura de staging y mejoras en la experiencia del usuario. Se prepara para un lanzamiento con la versión v1.0.0.

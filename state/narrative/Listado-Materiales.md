@@ -1,1 +1,0 @@
-Semana 1 (18-25 de agosto de 2026): El proyecto inició con la configuración de Integración Continua (CI) para agents remotos, mejorando la eficiencia. Se crearon 43 checkpoints, estableciendo un marco detallado para el seguimiento en áreas como seguridad, auditorías, UI/UX, desempeño y más, preparando una base sólida para el desarrollo futuro.

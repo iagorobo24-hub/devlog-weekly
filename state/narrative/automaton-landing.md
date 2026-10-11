@@ -1,1 +1,0 @@
-Semana 1 (2026-08-18 a 2026-08-25): Inicio del proyecto con foco en documentación de CI para Claude y política de agente AI. Se agregaron 20 líneas de código en 2 commits, modificando 2 archivos. No hubo issues o PRs cerradas, ni tags nuevos. El proyecto comienza a estructurar su proceso de CI con documentación específica para tecnologías de IA.

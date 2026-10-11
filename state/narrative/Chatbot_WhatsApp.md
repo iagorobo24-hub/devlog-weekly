@@ -1,1 +1,0 @@
-Semana 1 (2026-08-18 a 2026-08-25): Inicio del proyecto con enfoque en documentación. Se agregaron instrucciones para CI remota de Claude y se definió la política de agente AI para CI remota. Total de 2 commits, 2 archivos modificados, 20 líneas agregadas.

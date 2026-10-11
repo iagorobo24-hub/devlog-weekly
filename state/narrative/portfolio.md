@@ -1,1 +1,0 @@
-Semana 1 (2026-08-18 a 2026-08-25): Inicio del proyecto con 9 commits, rediseño 3D, mejoras UX, integración de analíticas y correcciones de estabilidad (71 archivos, 6092 adiciones, 2799 eliminaciones). Semana 2 (2026-08-25): 6 commits, 42 archivos modificados, 5720 adiciones, 556 eliminaciones. Mejoras SEO, enriquecimiento de contenido, y refactoreos visuales clave.

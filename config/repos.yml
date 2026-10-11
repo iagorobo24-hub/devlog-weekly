@@ -2,55 +2,15 @@ defaults:
   since_days: 7
 
 repos:
-  - name: iagorobo24-hub/GestionaB2B
-    showcase: true
-    pitch: "SaaS de gestión de stock B2B con copiloto de IA integrado"
-
-  # Resto de repos, añadidos en bloque. showcase/pitch a mano cuando decidas
-  # cuáles son de escaparate (ver nota en el README del skeleton: esto no
-  # lo debe adivinar el modelo).
+  # Solo repos PÚBLICOS: este repo es público y publica sus narrativas.
+  # No añadas repos privados (se filtraría su nombre y su contenido).
   - name: iagorobo24-hub/AUTOMATON
     showcase: false
-  - name: iagorobo24-hub/automaton-landing
-    showcase: false
-  - name: iagorobo24-hub/Autotrader
-    showcase: true
-    pitch: "Bot de trading algorítmico en Python sobre Alpaca, con gestión de riesgo, backtesting y pipeline de ML"
-  - name: iagorobo24-hub/Autotrader-con-IA
-    showcase: true
-    pitch: "Analista de inversiones con LLMs: filtros cuantitativos, agentes en LangGraph y briefings diarios"
   - name: iagorobo24-hub/awesome-tia-portal
     showcase: true
     pitch: "Librería awesome de bloques, UDTs y plantillas reutilizables para Siemens TIA Portal"
-  - name: iagorobo24-hub/business-building
-    showcase: false
-  - name: iagorobo24-hub/Chatbot_WhatsApp
-    showcase: false
-  - name: iagorobo24-hub/Freebuff-telegram-bot
-    showcase: true
-    pitch: "Bot de Telegram para controlar un asistente de IA en terminal: sesiones tmux, prompts async y selección de modelo"
-  - name: iagorobo24-hub/Listado-Materiales
-    showcase: true
-    pitch: "Extracción automática de listados de materiales (BOM) desde PDFs técnicos eléctricos e industriales"
-  - name: iagorobo24-hub/NexoDigital
-    showcase: false
-  - name: iagorobo24-hub/OpenAMRobot_UI_Contribute
-    showcase: false
   - name: iagorobo24-hub/opencode-telegram-bot
-    showcase: false
-  - name: iagorobo24-hub/PC-Ops
-    showcase: false
-  - name: iagorobo24-hub/pokemon-auction-house
-    showcase: true
-    pitch: "Plataforma de subastas de coleccionables Pokémon: pujas en tiempo real, custodia y pagos vía Stripe"
-  - name: iagorobo24-hub/portfolio
-    showcase: false
-  - name: iagorobo24-hub/portfolio-3D
-    showcase: false
-  - name: iagorobo24-hub/project-system-map
     showcase: false
   - name: iagorobo24-hub/proyecto-pfc-iago-duran
     showcase: true
     pitch: "Suite web académica para el sector eléctrico y logístico: 7 herramientas con asistencia de IA en una SPA"
-  - name: iagorobo24-hub/Proyecto_MAMA
-    showcase: false

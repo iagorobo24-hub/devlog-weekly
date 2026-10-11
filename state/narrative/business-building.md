@@ -1,1 +1,0 @@
-Semana 1 (2026-08-18 a 2026-08-25): Inicio del proyecto con foco en establecer la base para la integración continua remota. Se agregaron instrucciones para Claude y una política para el agente AI en la documentación, totalizando 20 líneas agregadas en 2 archivos y 2 commits.

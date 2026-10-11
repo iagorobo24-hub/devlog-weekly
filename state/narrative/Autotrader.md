@@ -1,1 +1,0 @@
-Semana 1 (2026-08-18 a 2026-08-25): Inicio del proyecto con un impulso significativo en infraestructura (Docker, scripts de salud, despliegue y respaldo), monitoreo (métricas de Prometheus), y funcionalidades de trading y ML. Se han realizado 52 commits, modificando 55 archivos, con 8463 adiciones y 880 eliminaciones. No hay historial previo.
