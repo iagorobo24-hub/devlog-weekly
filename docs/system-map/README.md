@@ -41,3 +41,9 @@ Las invariantes se detallan en [`invariants.md`](./invariants.md):
 - **Para orientación:** Consulte [`AGENTS.md`](../../AGENTS.md).
 - **Antes de modificar código:** Invoque `psm-before-change`.
 - **Al finalizar cambios:** Invoque `psm-maintain` para sincronizar documentación y verificar invariantes.
+
+---
+
+### Revisión remota de deriva — 2026-10-27
+
+[Consultar el registro GitHub de cambios y validaciones pendientes](./REVIEW-2026-10-27.md). La revisión **no** recertifica el mapa al último HEAD; `psm.source.commit` y los estados de evidencia históricos permanecen sin modificación hasta completar reconciliación y validación independiente.
