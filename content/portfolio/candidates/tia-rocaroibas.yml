@@ -1,0 +1,29 @@
+version: 1
+id: tia-rocaroibas
+title: TIA Portal RocaRoibas — agentes y Openness
+repo: iagorobo24-hub/T-IA-Portal-RocaRoibas
+revision: 7cea954b03b26532b4c28bdf3e3cef76c3a953d2
+visibility: public
+editorial_status: draft_only
+pitch: "Workspace para agentes de IA que trabajan con TIA Portal mediante herramientas MCP y contratos de operación."
+statements:
+  - text: "El repositorio documenta los servidores tia-inspect y tia-create."
+    kind: documented
+    source_path: README.md
+  - text: "Existe un conjunto de scripts de pruebas bajo 30-tools/tests."
+    kind: repository_directory
+    source_path: 30-tools/tests
+  - text: "La ejecución CI de la rama predeterminada terminó correctamente para la revisión documentada."
+    kind: ci_at_head
+    source_path: .github/workflows/ci.yml
+limitations:
+  - "La CI de GitHub no reproduce por sí misma una sesión real con Siemens TIA Portal."
+  - "Los resultados de Openness, PLCSIM y hardware indicados en la documentación deben contrastarse por separado."
+  - "Los diagramas de arquitectura no son capturas de una aplicación ejecutada."
+images:
+  - path: docs/img/banner.svg
+    kind: conceptual_illustration
+publication_gate:
+  independent_functional_check_required: true
+  runtime_evidence_required: true
+  explicit_editorial_approval_required: true

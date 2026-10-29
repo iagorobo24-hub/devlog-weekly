@@ -59,6 +59,26 @@ class PrivateReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "público"):
             r.build_review(data, self.local(), self.mapping(), now=NOW)
 
+    def test_ci_and_strategic_priority_are_distinct(self):
+        quality = {"visibility": "private-local", "schema": 1,
+                   "generated_at": NOW.isoformat(),
+                   "records": [{"visibility": "private",
+                                "repo": "iagorobo24-hub/zonagemelos-clipper",
+                                "ci": {"status": "success_at_head"},
+                                "readiness": "ci_head_passed_tests_exist"}]}
+        x = r.build_review(self.selection(), self.local(), self.mapping(), now=NOW,
+                           quality=quality)
+        row=x["projects_to_review"][0]
+        self.assertEqual(row["head_ci_status"], "success_at_head")
+        self.assertEqual(row["strategic_priority"], "requires_owner_review")
+        self.assertFalse(row["publishable"])
+
+    def test_public_quality_rejected(self):
+        quality = {"visibility": "public", "schema": 1}
+        with self.assertRaisesRegex(ValueError, "incompatible"):
+            r.build_review(self.selection(), self.local(), self.mapping(), now=NOW,
+                           quality=quality)
+
     def test_banned_in_ci(self):
         with patch.dict(os.environ,{"CI":"true"}):
             with self.assertRaisesRegex(RuntimeError,"prohibida"):

@@ -122,3 +122,39 @@ calificación objetiva de importancia estratégica o autorización para publicar
 proyectos privados. La incorporación a un PDF público sigue requiriendo
 autorización de contenido y fichas documentales versionadas. Todas estas
 operaciones quedan separadas del cron del portfolio maestro y de Drive.
+
+## Evidencia de calidad y fichas nuevas
+
+La selección no equivale a validación técnica. Existe un segundo comprobador
+público, src.audit_project_quality, que examina por cada candidato:
+README, rutas reales de tests, workflows y ejecuciones push de CI del
+commit EXACTO de la rama predeterminada durante 30 días. Una CI antigua o
+sobre otra rama no certifica el HEAD. Las pruebas de hardware, QA móvil y
+E2E se contrastan por separado; una carpeta de tests no equivale a pruebas
+pasadas.
+
+El resultado público se guarda en out/project-quality-public.json y se
+combina con src.selection_review; no altera las fichas de producción.
+src.candidate_profiles comprueba los borradores públicos, con afirmaciones
+limitadas y enlaces fijados a revisiones Git SHA completas. Los borradores de
+GuiaIA y TIA Portal RocaRoibas permanecen en
+content/portfolio/candidates/: draft_only, sin publicación automática,
+con advertencias de validación real y autorización editorial pendiente.
+
+Para los candidatos privados existe src.private_project_quality: solo puede
+ejecutarse localmente y produce un JSON con permisos 0600 dentro de
+~/.local/share/devlog-weekly/restricted. No imprime los nombres y queda
+prohibido en CI. src.private_review incorpora los estados de CI a sus
+señales de worktrees, pero deja explícitamente la importancia estratégica como
+requires_owner_review. No se inventan prioridades ni se importan datos
+privados a las fichas públicas. La apertura de contenido privado a terceros o
+a un PDF público necesita una autorización explícita sobre qué mostrar.
+
+### Límites editoriales todavía pendientes
+
+- Certificar ejecución real de los candidatos en entornos relevantes.
+- Contrastar diffs, tests y capturas para decidir qué logros pueden afirmarse.
+- Confirmar con el propietario el peso estratégico de cada producto.
+- Decidir qué proyectos privados, si alguno, pueden tener una versión pública.
+- Incorporar únicamente los proyectos aprobados al portfolio maestro,
+  conservando el diseño validado.

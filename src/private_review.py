@@ -22,6 +22,7 @@ except ModuleNotFoundError:
     from local_activity import OUTPUT as LOCAL_OUTPUT
 
 MAPPING = PRIVATE_DIR / "local-project-map.yml"
+PRIVATE_QUALITY = PRIVATE_DIR / "project-quality-private.json"
 OUTPUT = PRIVATE_DIR / "project-review-private.json"
 REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 LOCAL_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{1,64}$")
@@ -37,7 +38,7 @@ def read_json(path: Path) -> dict:
 
 
 def build_review(selection: dict, local: dict, mapping: dict, *,
-                 now: datetime) -> dict:
+                 now: datetime, quality: dict | None = None) -> dict:
     if selection.get("visibility") != "private-local" or local.get("visibility") != "private-local":
         raise ValueError("no combinar informes públicos con privados")
     for section in ("ranked", "other_active", "watchlist"):
@@ -55,6 +56,22 @@ def build_review(selection: dict, local: dict, mapping: dict, *,
     repo_index = {repo for group in (selection.get("ranked", []),)
                   for item in group for repo in item.get("repos", [])}
     # If a repo is outside top-N, retain its local signal without inventing a ranking.
+    quality_index = {}
+    if quality is not None:
+        if quality.get("visibility") != "private-local" or quality.get("schema") != 1:
+            raise ValueError("calidad privada incompatible")
+        try:
+            quality_date = datetime.fromisoformat(quality["generated_at"].replace("Z", "+00:00"))
+        except (ValueError, KeyError, AttributeError) as exc:
+            raise ValueError("fecha de calidad inválida") from exc
+        if quality_date.tzinfo is None or not timedelta(0) <= now - quality_date <= timedelta(hours=48):
+            raise ValueError("calidad privada desactualizada")
+        for item in quality.get("records", []):
+            if item.get("visibility") != "private":
+                raise ValueError("calidad pública mezclada en informe privado")
+            if item["repo"] in quality_index:
+                raise ValueError("repo duplicado en informe de calidad")
+            quality_index[item["repo"]] = item
     records, seen_paths = [], set()
     for row in rows:
         if not isinstance(row, dict):
@@ -85,9 +102,14 @@ def build_review(selection: dict, local: dict, mapping: dict, *,
             review = "upstream_missing"
         else:
             review = "no_local_flag"
+        evidence = quality_index.get(repo, {}) if repo else {}
         records.append({
             "repo": repo, "local_project": project,
             "in_github_top_candidates": repo in repo_index if repo else False,
+            "head_ci_status": evidence.get("ci", {}).get("status", "unknown"),
+            "quality_readiness": evidence.get("readiness", "quality_not_checked"),
+            "strategic_priority": "requires_owner_review",
+            "publishable": False,
             "review": review,
             "tracked_changed_files": changed if state.get("state") == "inspected" else None,
             "ahead_of_remote_verified": state.get("ahead_of_remote_verified"),
@@ -111,7 +133,9 @@ def run(now: datetime | None = None) -> dict:
     selection = read_json(PRIVATE_OUT)
     local = read_json(LOCAL_OUTPUT)
     mapping = yaml.safe_load(MAPPING.read_text(encoding="utf-8"))
-    result = build_review(selection, local, mapping, now=now or datetime.now(timezone.utc))
+    quality = read_json(PRIVATE_QUALITY) if PRIVATE_QUALITY.exists() else None
+    result = build_review(selection, local, mapping, now=now or datetime.now(timezone.utc),
+                          quality=quality)
     if PRIVATE_DIR.is_symlink() or OUTPUT.is_symlink() or OUTPUT.parent.resolve() != PRIVATE_DIR.resolve():
         raise ValueError("salida privada no autorizada")
     fd, temp = tempfile.mkstemp(prefix=".project-review-", dir=PRIVATE_DIR)

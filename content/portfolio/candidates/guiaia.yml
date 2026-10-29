@@ -1,0 +1,29 @@
+version: 1
+id: guiaia
+title: GuiaIA — acompañante de Minecraft
+repo: iagorobo24-hub/GuiaIA
+revision: 685bd6d1f614793db7e34667846b4d83b199b550
+visibility: public
+editorial_status: draft_only
+pitch: "Herramientas abiertas para observación y asistencia segura sobre mundos de Minecraft; todavía en desarrollo."
+statements:
+  - text: "El README identifica la versión pública actual como developer preview, no como acompañante de IA plenamente jugable."
+    kind: documented
+    source_path: README.md
+  - text: "El proyecto documenta una pasarela MCP de lectura con controles de seguridad."
+    kind: documented
+    source_path: README.md
+  - text: "Existen módulos de pruebas para MCP, observación y política."
+    kind: repository_file
+    source_path: tests/test_mcp.py
+limitations:
+  - "La presencia de pruebas no implica que la rama main haya superado la CI actual."
+  - "Las características futuras descritas en el README no deben presentarse como implementadas."
+  - "La ilustración del repositorio es conceptual, no una captura de una funcionalidad ejecutada."
+images:
+  - path: assets/guiaia-hero.svg
+    kind: conceptual_illustration
+publication_gate:
+  independent_functional_check_required: true
+  runtime_evidence_required: true
+  explicit_editorial_approval_required: true
