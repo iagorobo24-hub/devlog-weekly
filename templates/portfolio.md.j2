@@ -4,24 +4,42 @@ theme: devlog
 paginate: true
 size: 16:9
 style: |
-  section {
-    font-size: 26px;
-  }
+  section.portfolio { font-size: 23px; padding: 54px 68px; overflow-wrap: anywhere; }
+  section.portfolio p { line-height: 1.45; }
+  section.portfolio li { margin-bottom: 0.45em; line-height: 1.35; }
 ---
 
 <!-- _class: lead -->
 <!-- _paginate: false -->
 
-# Portfolio
+# Portfolio de proyectos
 
-{% for entry in entries %}
+*Resumen interpretativo: contrastar con los enlaces a GitHub*
+
+{% for slide in slides %}
 ---
 
-## {{ entry.name.split('/')[-1] }}
-{% if entry.pitch %}
-*{{ entry.pitch }}*
+<!-- _class: portfolio -->
+
+## {{ slide.title }}
+{% if slide.kind == 'narrative' %}
+{% if slide.pitch %}*{{ slide.pitch }}*{% endif %}
+
+**Evolución descrita por IA · {{ slide.part }}/{{ slide.total }}**
+
+{{ slide.body }}
+
+[Repositorio original]({{ slide.repo_url }})
+
+_Documentación interpretativa; no acredita por sí misma despliegue ni pruebas._
+{% else %}
+### Evidencias de GitHub
+{% for src in slide.sources %}
+- [{{ src.label }}]({{ src.url }}) · {{ src.date }} · {{ src.caption }}
+{% endfor %}
+
+[Repositorio original]({{ slide.repo_url }})
+
+_Referencias verificables, no una certificación del funcionamiento._
 {% endif %}
-
-{{ entry.narrativa }}
-
 {% endfor %}

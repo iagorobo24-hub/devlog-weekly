@@ -44,18 +44,22 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from render_master import (
-    PORTFOLIO_MD_PATH,
-    THEME_PATH,
-    had_showcase_activity_this_week,
-    load_narrative,
-    load_showcase_repos,
-)
+try:
+    from src.render_master import (
+        PORTFOLIO_MD_PATH, THEME_PATH, had_showcase_activity_this_week,
+        load_narrative, load_showcase_repos, load_portfolio_entries, build_slides,
+    )
+except ModuleNotFoundError:
+    from render_master import (
+        PORTFOLIO_MD_PATH, THEME_PATH, had_showcase_activity_this_week,
+        load_narrative, load_showcase_repos, load_portfolio_entries, build_slides,
+    )
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_VOICE = "es-ES-AlvaroNeural"
@@ -126,7 +130,9 @@ def export_slide_images() -> list[Path]:
         ],
         check=True,
     )
-    return sorted(WORK_DIR.glob("slide.*.png"))
+    return sorted(WORK_DIR.glob("slide.*.png"),
+                  key=lambda p: int(re.search(r"\.(\d+)$", p.stem).group(1))
+                  if re.search(r"\.(\d+)$", p.stem) else 0)
 
 
 def concat_segments(segments: list[Path]) -> None:
@@ -154,13 +160,7 @@ def main() -> None:
         log.info("ningún repo marcado como showcase: true; no genero vídeo")
         return
 
-    entries = []
-    for repo_cfg in showcase_repos:
-        narrativa = load_narrative(repo_cfg["name"])
-        if not narrativa:
-            continue
-        entries.append({"name": repo_cfg["name"], "pitch": repo_cfg.get("pitch"), "narrativa": narrativa})
-
+    entries = load_portfolio_entries()
     if not entries:
         log.info("ningún repo showcase tiene narrativa acumulada todavía; no genero vídeo")
         return
@@ -183,18 +183,19 @@ def main() -> None:
         shutil.rmtree(WORK_DIR)
     WORK_DIR.mkdir(parents=True)
 
+    slides = build_slides(entries)
     slide_images = export_slide_images()
-    if len(slide_images) != len(entries) + 1:
+    if len(slide_images) != len(slides) + 1:
         log.error(
             "%d slides exportadas pero %d esperadas (1 título + %d repos); ¿out/portfolio.md desincronizado?",
-            len(slide_images), len(entries) + 1, len(entries),
+            len(slide_images), len(slides) + 1, len(slides),
         )
         sys.exit(1)
     log.info("exportadas %d slides", len(slide_images))
 
     segments = []
     for i, (image_path, text) in enumerate(
-        zip(slide_images, [TITLE_NARRATION] + [narration_text(e) for e in entries]), start=1
+        zip(slide_images, [TITLE_NARRATION] + [slide["narration"] for slide in slides]), start=1
     ):
         text_path = WORK_DIR / f"narration.{i:03d}.txt"
         audio_path = WORK_DIR / f"narration.{i:03d}.mp3"

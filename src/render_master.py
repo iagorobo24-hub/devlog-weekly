@@ -27,6 +27,8 @@ Flags:
 from __future__ import annotations
 
 import argparse
+import html
+import re
 import json
 import logging
 import shutil
@@ -76,10 +78,69 @@ def had_showcase_activity_this_week(showcase_names: set[str]) -> bool:
     return any(r["name"] in showcase_names and not r.get("trivial", True) for r in data["repos"])
 
 
+def load_portfolio_entries() -> list[dict]:
+    """Only configured showcase projects; source URLs come from GitHub, not an LLM."""
+    current = {}
+    if SUMMARIES_PATH.exists():
+        for summary in json.loads(SUMMARIES_PATH.read_text(encoding="utf-8")).get("repos", []):
+            current[summary["name"]] = summary
+    entries = []
+    for cfg in load_showcase_repos():
+        narrative = load_narrative(cfg["name"])
+        if not narrative:
+            continue
+        summary = current.get(cfg["name"], {})
+        sources = summary.get("verified_sources", []) if not summary.get("trivial", True) else []
+        entries.append({"name": cfg["name"], "pitch": cfg.get("pitch") or "",
+                        "narrativa": narrative, "sources": sources})
+    return entries
+
+
+def build_slides(entries: list[dict], max_words: int = 65) -> list[dict]:
+    """Paginate all historical text, mark AI claims as unverified and link to provenance."""
+    if not 30 <= max_words <= 85:
+        raise ValueError("max_words must be between 30 and 85")
+    slides = []
+    for entry in entries:
+        name = entry["name"]
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", name):
+            raise ValueError("invalid GitHub repository")
+        title = html.escape(name.split("/")[-1])
+        pitch = html.escape(" ".join(str(entry.get("pitch") or "").split()))
+        repo_url = "https://github.com/" + name
+        words = str(entry.get("narrativa") or "").replace(chr(92)+"n", " ").split()
+        chunks = [words[i:i + max_words] for i in range(0, len(words), max_words)]
+        for index, chunk in enumerate(chunks, 1):
+            content = " ".join(chunk)
+            slides.append({"kind": "narrative", "title": title,
+                           "pitch": pitch if index == 1 else "",
+                           "body": html.escape(content).replace("|", "/"),
+                           "part": index, "total": len(chunks), "repo_url": repo_url,
+                           "narration": (name.split("/")[-1] + ". " if index == 1 else "")
+                           + (str(entry.get("pitch") or "") + ". " if index == 1 else "")
+                           + content})
+        sources = []
+        for item in entry.get("sources", []):
+            url = item.get("url", "")
+            # Only use exact links derived by synthesize. No arbitrary URLs.
+            if not re.fullmatch(re.escape(repo_url) + r"/(?:commit/[0-9a-fA-F]{7,64}|pull/[0-9]+|issues/[0-9]+)", url):
+                continue
+            label = html.escape(str(item.get("id") or ""))[:35]
+            date = html.escape(str(item.get("date") or "")[:10])
+            caption = html.escape(" ".join(str(item.get("title") or "").split())[:100])
+            sources.append({"url": url, "label": label, "date": date, "caption": caption})
+        for start in range(0, len(sources), 4):
+            slides.append({"kind": "sources", "title": title, "repo_url": repo_url,
+                           "sources": sources[start:start+4],
+                           "narration": ("Referencias comprobables de " + name.split("/")[-1]
+                                         + ". Enlaces a GitHub para revisar los cambios.")})
+    return slides
+
+
 def render_markdown(entries: list[dict]) -> str:
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR), trim_blocks=True, lstrip_blocks=True)
     template = env.get_template(TEMPLATE_NAME)
-    return template.render(entries=entries)
+    return template.render(slides=build_slides(entries))
 
 
 def convert_to_pdf(md_path: Path, pdf_path: Path) -> None:
@@ -108,13 +169,7 @@ def main() -> None:
         log.info("ningún repo marcado como showcase: true; no genero deck maestro")
         return
 
-    entries = []
-    for repo_cfg in showcase_repos:
-        narrativa = load_narrative(repo_cfg["name"])
-        if not narrativa:
-            continue  # todavía sin historial acumulado
-        entries.append({"name": repo_cfg["name"], "pitch": repo_cfg.get("pitch"), "narrativa": narrativa})
-
+    entries = load_portfolio_entries()
     if not entries:
         log.info("ningún repo showcase tiene narrativa acumulada todavía; no genero deck maestro")
         return

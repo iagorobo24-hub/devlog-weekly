@@ -54,12 +54,28 @@ jobs:
           mkdir -p out
           cp tests/fixtures/weekly_sample.json out/summaries.json
           uv run python src/render.py
+      - name: Portfolio maestro paginado y validación de slides (sin voz, Drive ni estado)
+        run: |
+          uv run python src/render_master.py --force
+          uv run python - <<'PYCODE'
+          from src import render_master, render_video
+          entries = render_master.load_portfolio_entries()
+          expected = len(render_master.build_slides(entries)) + 1
+          render_video.WORK_DIR.mkdir(parents=True, exist_ok=True)
+          actual = render_video.export_slide_images()
+          if len(actual) != expected:
+              raise SystemExit(f"Desincronización de páginas: {len(actual)} != {expected}")
+          print(f"PORTFOLIO PREVIEW: {len(entries)} proyectos, {len(actual)} diapositivas visuales")
+          PYCODE
       - uses: actions/upload-artifact@v4
         with:
           name: devlog-quality-weekly-preview
           path: |
             out/deck.md
             out/deck.pdf
+            out/portfolio.md
+            out/portfolio.pdf
+            out/video/slide.*.png
           if-no-files-found: error
           retention-days: 30
 
