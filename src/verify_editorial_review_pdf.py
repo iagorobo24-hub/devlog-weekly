@@ -29,6 +29,9 @@ KEYWORDS = (
 )
 REPO = re.compile(r"^iagorobo24-hub/[A-Za-z0-9_.-]+$")
 PINNED = re.compile(r"^/iagorobo24-hub/[A-Za-z0-9_.-]+/blob/[0-9a-f]{40}/[A-Za-z0-9_./-]+$")
+CI_RUN = re.compile(r"^/iagorobo24-hub/[A-Za-z0-9_.-]+/actions/runs/[0-9]+$")
+CI_STATES = {"success_at_head", "failure_or_cancelled", "unknown",
+             "pending", "inconclusive", "unavailable"}
 
 
 def validate_source(md: str, manifest: dict) -> dict:
@@ -45,6 +48,14 @@ def validate_source(md: str, manifest: dict) -> dict:
     names = [r for bucket in buckets for r in bucket]
     if len(set(names)) != 6 or any(not isinstance(n, str) or not REPO.fullmatch(n) for n in names):
         raise ValueError("Repositorio privado o duplicado")
+    observed = manifest.get("observed_ci_by_repo")
+    expected = names[:5]
+    if (manifest.get("ci_evidence_synced") is not True
+            or not isinstance(manifest.get("evidence_report_sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", manifest["evidence_report_sha256"]) is None
+            or not isinstance(observed, dict) or set(observed) != set(expected)
+            or any(status not in CI_STATES for status in observed.values())):
+        raise ValueError("Informe PDF sin CI reconciliada en los cinco casos")
     if not isinstance(md, str) or len(md) > 120000:
         raise ValueError("Markdown inválido")
     sha = hashlib.sha256(md.encode("utf-8")).hexdigest()
@@ -115,7 +126,8 @@ def validate_pdf(path: Path, source: dict) -> dict:
                     continue
                 parsed = urlparse(url)
                 if (parsed.scheme != "https" or parsed.netloc != "github.com"
-                        or not PINNED.fullmatch(parsed.path)):
+                        or not (PINNED.fullmatch(parsed.path)
+                                or CI_RUN.fullmatch(parsed.path))):
                     raise ValueError(f"Página {index+1}: URL no versionada")
                 urls.append(url)
             # In the case-study slides evidence links are mandatory; if

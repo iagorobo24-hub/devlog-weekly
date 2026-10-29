@@ -5,7 +5,7 @@ import yaml
 
 from src.portfolio_data import load_portfolio
 from src.render_portfolio_editorial_closure import (
-    SELECTION, build_slides, validate,
+    SELECTION, build_slides, validate, validate_evidence_feed,
 )
 
 REPOS = (
@@ -122,6 +122,53 @@ class StablePublicCurationTests(unittest.TestCase):
         b["current_portfolio"][0]["pinned_revision"] = "b" * 40
         with self.assertRaisesRegex(ValueError, "no coincide"):
             validate(a, b, c)
+
+    def test_reconciled_ci_updates_guia_and_pfc_without_runtime_promotion(self):
+        a, b, c = fixture()
+        feed = {
+            "schema": 1, "visibility": "public",
+            "automatic_publication": False,
+            "safe_to_replace_public_portfolio": False,
+            "public_projects_only": True, "private_sources_inspected": False,
+            "ci_reports_consistent": True, "ci_report_disagreements": [],
+            "source_selection_generated_at": b.get("selection_generated_at"),
+            "cases": [
+                {"repo": p["repo"], "revision": p["revision"], "visibility": "public",
+                 "head_matches_revision": True, "ready_for_publication": False,
+                 "owner_permission_confirmed": False,
+                 "independent_runtime_validated": False,
+                 "ci": {"status": ("failure_or_cancelled" if p["repo"] == REPOS[1]
+                                   else "success_at_head" if p["repo"] in REPOS[:1]+REPOS[2:3]
+                                   else "unknown"),
+                        "run_url": ("https://github.com/" + p["repo"] +
+                                    "/actions/runs/42" if p["repo"] in REPOS[:3] else None)}}
+                for p in a["main_cases"] + a["supporting_cases"]
+            ],
+        }
+        labels = build_slides(a, b, c, evidence=feed, stamp="fijo")
+        self.assertIn("CI de push en HEAD correcta", labels[4]["markup"])
+        self.assertIn("CI de push en HEAD fallida", labels[3]["markup"])
+        self.assertIn("actions/runs/42", labels[4]["markup"])
+        self.assertTrue(all("NO PUBLICAR" in x["markup"] for x in labels))
+        bad = deepcopy(feed)
+        bad["ci_reports_consistent"] = False
+        with self.assertRaisesRegex(ValueError, "no reconciliada"):
+            validate_evidence_feed(bad, a, b)
+        bad = deepcopy(feed)
+        bad["cases"][0]["ci"]["run_url"] = "https://evil.example/run/42"
+        with self.assertRaisesRegex(ValueError, "ajeno"):
+            validate_evidence_feed(bad, a, b)
+
+    def test_evidence_rejects_stale_head_and_missing_case(self):
+        a, b, _ = fixture()
+        payload = {"schema": 1, "visibility": "public", "automatic_publication": False,
+                   "safe_to_replace_public_portfolio": False,
+                   "public_projects_only": True, "private_sources_inspected": False,
+                   "ci_reports_consistent": True, "ci_report_disagreements": [],
+                   "source_selection_generated_at": b.get("selection_generated_at"),
+                   "cases": []}
+        with self.assertRaisesRegex(ValueError, "incompleta"):
+            validate_evidence_feed(payload, a, b)
 
     def test_html_prose_escaped_in_output(self):
         a, b, c = fixture()

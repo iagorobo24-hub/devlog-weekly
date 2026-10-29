@@ -23,6 +23,7 @@ SELECTION = ROOT / "content/portfolio/editorial-selection-public.yml"
 OUT = ROOT / "out"
 MD = OUT / "portfolio-editorial-closure-v4.md"
 MANIFEST = OUT / "portfolio-editorial-closure-v4-manifest.json"
+EVIDENCE = OUT / "portfolio-evidence-public.json"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 REPO_RE = re.compile(r"^iagorobo24-hub/[A-Za-z0-9_.-]+$")
 PATH_RE = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$")
@@ -153,9 +154,58 @@ def validate(selection: dict, report: dict, portfolio: dict) -> tuple[list, list
     return (*buckets, indexed)
 
 
+CI_STATES = {"success_at_head", "failure_or_cancelled", "unknown",
+             "pending", "inconclusive", "unavailable"}
+
+
+def validate_evidence_feed(feed: dict, selection: dict, release: dict) -> dict:
+    """Read-only CI evidence must refer to the same five pinned public cases."""
+    if (not isinstance(feed, dict) or feed.get("schema") != 1
+            or feed.get("visibility") != "public"
+            or feed.get("automatic_publication") is not False
+            or feed.get("safe_to_replace_public_portfolio") is not False
+            or feed.get("public_projects_only") is not True
+            or feed.get("private_sources_inspected") is not False
+            or feed.get("ci_reports_consistent") is not True
+            or feed.get("ci_report_disagreements") != []
+            or feed.get("source_selection_generated_at")
+            != release.get("selection_generated_at")):
+        raise ValueError("CI pública no reconciliada con la selección")
+    cases = feed.get("cases")
+    selected = selection["main_cases"] + selection["supporting_cases"]
+    expected = {p["repo"]: p["revision"] for p in selected}
+    if not isinstance(cases, list) or len(cases) != len(expected):
+        raise ValueError("Cobertura de CI de cinco proyectos incompleta")
+    lookup = {}
+    for p in cases:
+        if not isinstance(p, dict):
+            raise ValueError("Fila CI pública inválida")
+        repo, sha = p.get("repo"), p.get("revision")
+        if (repo not in expected or sha != expected[repo] or repo in lookup
+                or p.get("visibility") != "public"
+                or p.get("head_matches_revision") is not True
+                or p.get("ready_for_publication") is not False
+                or p.get("owner_permission_confirmed") is not False
+                or p.get("independent_runtime_validated") is not False):
+            raise ValueError("CI con identidad, revisión o autorización inválida")
+        ci = p.get("ci")
+        if not isinstance(ci, dict) or ci.get("status") not in CI_STATES:
+            raise ValueError("Estado CI público inválido")
+        url = ci.get("run_url")
+        prefix = f"https://github.com/{repo}/actions/runs/"
+        if url is not None and (
+                not isinstance(url, str) or not url.startswith(prefix)
+                or not url[len(prefix):].isdigit()):
+            raise ValueError("Enlace CI ajeno o no canónico")
+        lookup[repo] = ci
+    return lookup
+
+
 def build_slides(selection: dict, report: dict, portfolio: dict, *,
-                 stamp: str = "Revisión editorial") -> list[dict]:
+                 stamp: str = "Revisión editorial",
+                 evidence: dict | None = None) -> list[dict]:
     main, supporting, excluded, checked = validate(selection, report, portfolio)
+    verified_ci = validate_evidence_feed(evidence, selection, report) if evidence is not None else {}
 
     def source_link(project: dict, proof: dict) -> str:
         url = ("https://github.com/" + project["repo"] + "/blob/" +
@@ -165,15 +215,28 @@ def build_slides(selection: dict, report: dict, portfolio: dict, *,
                 '<span>' + esc(proof["claim"]) + '</span></a>')
 
     def evidence_label(project: dict) -> str:
+        if project["repo"] in verified_ci:
+            ci = verified_ci[project["repo"]]
+            status = ci["status"]
+            if status == "success_at_head":
+                label = "CI de push en HEAD correcta · no acredita funcionamiento real"
+            elif status == "failure_or_cancelled":
+                label = "CI de push en HEAD fallida · no presentar como estable"
+            else:
+                label = "CI en HEAD no confirmada · no implica fallo"
+            if ci.get("run_url"):
+                return ('<a href="' + esc(ci["run_url"]) + '">' +
+                        esc(label) + '</a>')
+            return esc(label)
         row = checked.get(project["repo"])
         if not row:
-            return "Caso ya publicado · CI no reexaminada en este ciclo"
+            return esc("Caso ya publicado · CI no reexaminada en este ciclo")
         ci = row.get("ci_status")
         if ci == "success_at_head":
-            return "CI al HEAD correcta · no sustituye ejecución con hardware"
+            return esc("CI al HEAD correcta · no sustituye ejecución con hardware")
         if ci == "failure_or_cancelled":
-            return "CI al HEAD fallida · no promover"
-        return "CI en rama predeterminada no confirmada · no implica fallo"
+            return esc("CI al HEAD fallida · no promover")
+        return esc("CI en rama predeterminada no confirmada · no implica fallo")
 
     def story_card(project: dict, label: str) -> str:
         return ('<div class="pf-project-summary"><span class="pf-mini">' +
@@ -222,7 +285,7 @@ def build_slides(selection: dict, report: dict, portfolio: dict, *,
             '<p>' + esc(project["takeaway"]) + '</p></div></div>'
             '<div class="pf-two">' + bullets[:6000] + '</div>'
             '<div class="pf-evidence-grid"><div><span class="pf-mini">ESTADO</span>'
-            '<p class="pf-limit">' + esc(evidence_label(project)) + '</p>'
+            '<p class="pf-limit">' + evidence_label(project) + '</p>'
             '<p class="pf-limit">' + esc(project["limits"]) + '</p></div>'
             '<div class="pf-evidence-list">' + refs + '</div></div>',
             "Historia principal documentada, pendiente de validación funcional.",
@@ -280,8 +343,13 @@ def render() -> dict:
     selection = yaml.safe_load(SELECTION.read_text(encoding="utf-8"))
     release = json.loads(RELEASE.read_text(encoding="utf-8"))
     portfolio = load_portfolio()
+    if not EVIDENCE.is_file() or EVIDENCE.is_symlink():
+        raise ValueError("Falta auditoría CI independiente para el PDF V4")
+    evidence_bytes = EVIDENCE.read_bytes()
+    evidence = json.loads(evidence_bytes)
+    statuses = validate_evidence_feed(evidence, selection, release)
     slides = build_slides(
-        selection, release, portfolio,
+        selection, release, portfolio, evidence=evidence,
         stamp=datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"))
     markdown = render_markdown(slides)
     manifest = {
@@ -293,6 +361,9 @@ def render() -> dict:
         "excluded_cases": [p["repo"] for p in selection["excluded_cases"]],
         "curated_portfolio_unchanged": True,
         "publication_approved": False, "automatic_publication": False,
+        "ci_evidence_synced": True,
+        "evidence_report_sha256": hashlib.sha256(evidence_bytes).hexdigest(),
+        "observed_ci_by_repo": {repo: ci["status"] for repo, ci in sorted(statuses.items())},
         "slide_count": len(slides),
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
     }

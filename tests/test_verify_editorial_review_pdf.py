@@ -21,6 +21,9 @@ def manifest():
             "automatic_publication": False,
             "main_cases": NAMES[:3], "supporting_cases": NAMES[3:5],
             "excluded_cases": NAMES[5:], "slide_count": 9,
+            "ci_evidence_synced": True,
+            "evidence_report_sha256": "a"*64,
+            "observed_ci_by_repo": {r: "unknown" for r in NAMES[:5]},
             "markdown_sha256": hashlib.sha256(MD.encode()).hexdigest()}
 
 
@@ -41,6 +44,28 @@ class PdfSourceTests(unittest.TestCase):
         m=manifest();m["main_cases"][0]="private/example"
         with self.assertRaisesRegex(ValueError, "privado"):
             validate_source(MD,m)
+
+    def test_pdf_source_refuses_old_nonreconciled_ci_manifest(self):
+        m=manifest();m["ci_evidence_synced"]=False
+        with self.assertRaisesRegex(ValueError,"sin CI reconciliada"):
+            validate_source(MD,m)
+
+    def test_pdf_source_refuses_missing_ci_case_and_forged_hash(self):
+        m=manifest();m["observed_ci_by_repo"].pop(NAMES[2])
+        with self.assertRaisesRegex(ValueError,"sin CI reconciliada"):
+            validate_source(MD,m)
+        m=manifest();m["evidence_report_sha256"]="invalid"
+        with self.assertRaisesRegex(ValueError,"sin CI reconciliada"):
+            validate_source(MD,m)
+
+    def test_ci_action_link_must_be_canonical(self):
+        from src.verify_editorial_review_pdf import CI_RUN
+        self.assertIsNotNone(CI_RUN.fullmatch(
+            "/iagorobo24-hub/GuiaIA/actions/runs/40821224773"))
+        self.assertIsNone(CI_RUN.fullmatch(
+            "/other-user/GuiaIA/actions/runs/40821224773"))
+        self.assertIsNone(CI_RUN.fullmatch(
+            "/iagorobo24-hub/GuiaIA/actions/runs/not-a-number"))
 
     def test_missing_slide_blocked(self):
         changed=MD.replace("<!-- _class:", "<!-- broken:",1)

@@ -74,12 +74,12 @@ jobs:
         run: uv run python -m src.render_portfolio_review --no-html
       - name: Componer el portfolio V3 propuesto sin publicar
         run: uv run python -m src.render_portfolio_proposal
-      - name: Generar cierre de selección editorial V4 sin publicar
-        run: uv run python -m src.render_portfolio_editorial_closure
       - name: Contrastar CI, fuentes y capturas de la selección pública final
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: uv run python -m src.portfolio_evidence_gate
+      - name: Generar cierre editorial V4 con CI reconciliada
+        run: uv run python -m src.render_portfolio_editorial_closure
       - uses: actions/upload-artifact@v4
         with:
           name: project-selection-public-preview
