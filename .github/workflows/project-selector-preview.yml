@@ -78,6 +78,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: uv run python -m src.portfolio_evidence_gate
+      - name: Examinar pasos de test y seguridad de ejecuciones exactas
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run python -m src.portfolio_functional_readiness
       - name: Generar cierre editorial V4 con CI reconciliada
         run: uv run python -m src.render_portfolio_editorial_closure
       - uses: actions/upload-artifact@v4
@@ -105,5 +109,7 @@ jobs:
             out/portfolio-editorial-closure-v4-manifest.json
             out/portfolio-evidence-public.json
             out/portfolio-evidence-public.md
+            out/portfolio-functional-readiness-public.json
+            out/portfolio-functional-readiness-public.md
           if-no-files-found: error
           retention-days: 14
