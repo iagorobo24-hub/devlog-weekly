@@ -227,17 +227,21 @@ def build_slides(selection: dict, report: dict, portfolio: dict, *,
             '<div class="pf-evidence-list">' + refs + '</div></div>',
             "Historia principal documentada, pendiente de validación funcional.",
             project["repo"]))
-    for project in supporting:
+    for index, project in enumerate(supporting, start=5):
         refs = "".join(source_link(project, item) for item in project["evidence"][:1])
         slides.append(page(
             "closure-supporting",
-            '<div class="pf-meta">05 / CASO COMPLEMENTARIO</div>'
+            '<div class="pf-meta">0' + str(index) + ' / CASO COMPLEMENTARIO</div>'
             '<h2>' + esc(project["title"]) + '</h2>'
             '<p class="pf-lead">' + esc(project["problem"]) + '</p>'
             '<div class="pf-two"><div class="pf-card pf-card-accent">'
             '<span class="pf-mini">SOLUCIÓN</span><p>' + esc(project["solution"]) +
             '</p></div><div class="pf-card"><span class="pf-mini">APORTACIÓN</span>'
             '<p>' + esc(project["takeaway"]) + '</p></div></div>'
+            '<div class="pf-two">' + "".join(
+                '<div class="pf-card"><span class="pf-mini">APORTACIÓN DOCUMENTADA</span>'
+                '<p>' + esc(item) + '</p></div>'
+                for item in project["contributions"][:2]) + '</div>'
             '<div class="pf-evidence-list">' + refs + '</div>'
             '<p class="pf-limit">' + esc(project["limits"]) + '</p>',
             "Aportación complementaria con límites y fuentes explícitos.",

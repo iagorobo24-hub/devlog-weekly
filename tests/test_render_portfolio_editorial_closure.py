@@ -50,9 +50,9 @@ class StablePublicCurationTests(unittest.TestCase):
     def test_stable_selection_has_three_main_two_support_and_one_excluded(self):
         a, b, c = fixture()
         primary, supporting, excluded, _ = validate(a, b, c)
-        self.assertEqual([x["repo"] for x in primary], REPOS[:3])
-        self.assertEqual([x["repo"] for x in supporting], REPOS[3:5])
-        self.assertEqual([x["repo"] for x in excluded], REPOS[5:])
+        self.assertEqual([x["repo"] for x in primary], list(REPOS[:3]))
+        self.assertEqual([x["repo"] for x in supporting], list(REPOS[3:5]))
+        self.assertEqual([x["repo"] for x in excluded], list(REPOS[5:]))
         self.assertTrue(a["policy"]["evaluate_recent_commits_as_secondary"])
         self.assertFalse(a["policy"]["automatic_publication"])
 
