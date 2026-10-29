@@ -55,7 +55,7 @@ projects:
     solution: "Unificar siete módulos especializados y su navegación en una misma aplicación web."
     stack: ["React 19", "Vite 7", "Supabase", "Vercel", "Vitest", "Playwright"]
     hero_image: "assets/portfolio/pfc-dashboard.png"
-    hero_caption: "Captura del dashboard dentro de las pruebas versionadas."
+    hero_caption: "Captura versionada de la navegación y el módulo Fichas Técnicas."
     detail_image: "assets/portfolio/pfc-kpi.png"
     detail_caption: "Captura versionada del panel de KPI."
     second_image: "assets/portfolio/pfc-almacen.png"

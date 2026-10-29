@@ -86,6 +86,31 @@ jobs:
               raise SystemExit(f"Las imágenes no coinciden con las diapositivas: {len(images)} != {expected}")
           print(f"PORTFOLIO V2: {expected} diapositivas y {len(images)} imágenes verificadas")
           PYCODE
+      - name: Quality gate del PDF editorial V2
+        run: |
+          uv run --with pymupdf python src/quality_gate.py --pdf out/portfolio-v2.pdf --manifest out/portfolio-v2-manifest.json
+      - name: Validar montaje audiovisual V2 sin servicio de voz ni Drive
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          uv run python src/render_video_v2.py --images-dir out/v2-png --smoke-tone --output out/portfolio-v2-smoke.mp4
+          uv run python - <<'PYCODE'
+          import json, subprocess
+          from pathlib import Path
+          path = Path("out/portfolio-v2-smoke.mp4")
+          meta = json.loads(subprocess.check_output([
+              "ffprobe", "-v", "error", "-show_entries", "stream=codec_name",
+              "-show_entries", "format=duration", "-of", "json", str(path)
+          ]))
+          codecs = {stream.get("codec_name") for stream in meta["streams"]}
+          if not {"h264", "aac"} <= codecs or float(meta["format"]["duration"]) < 7:
+              raise SystemExit("Vídeo editorial incompleto o sin audio")
+          if not Path("out/portfolio-v2.srt").is_file():
+              raise SystemExit("Faltan subtítulos")
+          print("VIDEO SMOKE OK", codecs, meta["format"]["duration"])
+          PYCODE
       - uses: actions/upload-artifact@v4
         with:
           name: devlog-quality-weekly-preview
@@ -99,6 +124,8 @@ jobs:
             out/portfolio-v2.pdf
             out/portfolio-v2-manifest.json
             out/v2-png/slide.*.png
+            out/portfolio-v2-smoke.mp4
+            out/portfolio-v2.srt
           if-no-files-found: error
           retention-days: 30
 
