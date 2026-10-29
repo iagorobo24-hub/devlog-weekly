@@ -1,1 +1,1 @@
-Ejecución única de auditoría pública de fuentes, imágenes y CI exacta. Rama temporal aislada; sin publicación ni cambios a las fichas.
+Segundo ensayo de auditoría V5 con consulta CI corregida en main y contraste de informes. Publicación no autorizada.

@@ -151,7 +151,7 @@ def _repo_facts(gh: Github, name: str, *, expected_private: bool) -> dict:
         if exc.status != 404:
             raise
     runs = []
-    for run in list(islice(r.get_workflow_runs(event="push"), MAX_RUNS)):
+    for run in list(islice(r.get_workflow_runs(event="push", branch=branch, head_sha=head), MAX_RUNS)):
         url = getattr(run, "html_url", None)
         if not isinstance(url, str) or not url.startswith("https://github.com/"):
             url = None

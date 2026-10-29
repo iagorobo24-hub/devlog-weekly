@@ -8,7 +8,7 @@ import yaml
 
 from src.portfolio_data import load_portfolio
 from src.portfolio_evidence_gate import (
-    SOURCE, SELECTION, validate_inventory, path_ok, build, render_md,
+    SOURCE, SELECTION, validate_inventory, path_ok, build, render_md, reconcile_ci_evidence,
 )
 
 NOW = datetime(2026, 10, 29, 20, tzinfo=timezone.utc)
@@ -143,6 +143,36 @@ class EvidenceInventoryTests(unittest.TestCase):
         c["candidates"][0]["approved_for_release"] = True
         with self.assertRaisesRegex(ValueError, "Preflight"):
             validate_inventory(a, b, c, d)
+
+    def test_quality_disagreement_is_explicit_not_silently_trusted(self):
+        a,b,c,d=fixture()
+        gh,_=mock_github(a)
+        report=build(a,b,c,d,gh,now=NOW)
+        mismatched={
+            "schema":1, "visibility":"public",
+            "source_selection_generated_at":c["selection_generated_at"],
+            "records":[{"repo":"iagorobo24-hub/GuiaIA", "visibility":"public",
+                        "head":a["projects"][2]["revision"],
+                        "ci":{"status":"unknown"}}],
+        }
+        check=reconcile_ci_evidence(report,mismatched)
+        self.assertFalse(check["ci_reports_consistent"])
+        self.assertEqual(check["ci_report_disagreements"][0]["repo"],
+                         "iagorobo24-hub/GuiaIA")
+        self.assertIn("Inconsistencias de CI",render_md(check))
+        mismatched["records"][0]["ci"]["status"]="success_at_head"
+        ok=reconcile_ci_evidence(report,mismatched)
+        self.assertTrue(ok["ci_reports_consistent"])
+        self.assertEqual(ok["ci_report_disagreements"], [])
+
+    def test_rejects_foreign_or_outdated_quality_snapshot(self):
+        a,b,c,d=fixture()
+        gh,_=mock_github(a)
+        report=build(a,b,c,d,gh,now=NOW)
+        with self.assertRaisesRegex(ValueError,"different public snapshots"):
+            reconcile_ci_evidence(report, {"schema":1,"visibility":"public",
+                "source_selection_generated_at":"2026-01-01T00:00:00Z",
+                "records":[]})
 
     def test_path_sanitization(self):
         self.assertTrue(path_ok("screenshots/real.png"))
