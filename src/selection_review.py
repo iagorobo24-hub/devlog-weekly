@@ -46,6 +46,7 @@ def build_review(selection: dict, editorial: dict,
     catalog = {p["repo"] for p in editorial["projects"]}
     if candidate_drafts is not None and (not isinstance(candidate_drafts, set)
             or any(not isinstance(x, str) or not NAME_RE.fullmatch(x)
+                   or any(part in (".", "..") for part in x.split("/"))
                    for x in candidate_drafts)):
         raise ValueError("fichas candidatas inválidas")
     recommendations = []

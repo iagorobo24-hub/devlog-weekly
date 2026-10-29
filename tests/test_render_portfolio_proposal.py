@@ -32,7 +32,8 @@ def fixture():
                                    if index == 1 else None),
         })
         drafts.append({
-            "repo": repo, "revision": SHA, "title": "Ficha " + str(index),
+            "repo": repo, "revision": SHA,
+            "title": ["GuiaIA", "TIA", "Awesome", "ATM10", "AUTOMATON"][index],
             "visibility": "public", "draft_only": True,
             "publication_allowed": False,
             "pitch": "Fuente documentada, todavía sin demostración completa.",
