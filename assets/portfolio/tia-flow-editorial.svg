@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="640" viewBox="0 0 1240 640" role="img" aria-labelledby="title desc">
+<title id="title">Arquitectura documentada UDT, FB y HMI</title>
+<desc id="desc">Tres módulos conectados de izquierda a derecha. Diseño documentado, no certificación global de la biblioteca.</desc>
+<rect width="1240" height="640" rx="26" fill="#0b1d2d"/>
+<text x="64" y="77" fill="#76dcd9" font-family="DejaVu Sans" font-size="29" font-weight="bold">CONTRATO TÉCNICO DE DISEÑO</text>
+<text x="64" y="120" fill="#c5d5e1" font-family="DejaVu Sans" font-size="22">El UDT define datos compartidos; el FB ejecuta la lógica; el HMI los representa.</text>
+<rect x="53" y="194" width="338" height="278" rx="21" fill="#113a4a" stroke="#47d5d1" stroke-width="4"/>
+<rect x="451" y="194" width="338" height="278" rx="21" fill="#143046" stroke="#4785a7" stroke-width="4"/>
+<rect x="849" y="194" width="338" height="278" rx="21" fill="#183444" stroke="#9bc18a" stroke-width="4"/>
+<text x="222" y="295" fill="#ffffff" text-anchor="middle" font-family="DejaVu Sans" font-size="67" font-weight="bold">UDT</text>
+<text x="620" y="295" fill="#ffffff" text-anchor="middle" font-family="DejaVu Sans" font-size="67" font-weight="bold">FB</text>
+<text x="1018" y="295" fill="#ffffff" text-anchor="middle" font-family="DejaVu Sans" font-size="67" font-weight="bold">HMI</text>
+<text x="222" y="355" fill="#c7e2e6" text-anchor="middle" font-family="DejaVu Sans" font-size="31">Tipos de datos</text>
+<text x="620" y="355" fill="#c7e2e6" text-anchor="middle" font-family="DejaVu Sans" font-size="31">Lógica de control</text>
+<text x="1018" y="355" fill="#c7e2e6" text-anchor="middle" font-family="DejaVu Sans" font-size="31">Visualización</text>
+<text x="222" y="411" fill="#c7e2e6" text-anchor="middle" font-family="DejaVu Sans" font-size="24">Interfaz común</text>
+<text x="620" y="411" fill="#c7e2e6" text-anchor="middle" font-family="DejaVu Sans" font-size="24">Parámetro InOut</text>
+<text x="1018" y="411" fill="#c7e2e6" text-anchor="middle" font-family="DejaVu Sans" font-size="24">Enlace al UDT</text>
+<path d="M394 333 H445" fill="none" stroke="#47d5d1" stroke-width="8" stroke-linecap="round"/>
+<path d="M430 317 L450 333 L430 349" fill="none" stroke="#47d5d1" stroke-width="7" stroke-linecap="round"/>
+<path d="M792 333 H843" fill="none" stroke="#47d5d1" stroke-width="8" stroke-linecap="round"/>
+<path d="M828 317 L848 333 L828 349" fill="none" stroke="#47d5d1" stroke-width="7" stroke-linecap="round"/>
+<line x1="65" y1="518" x2="1170" y2="518" stroke="#2d5364" stroke-width="2"/>
+<text x="67" y="564" fill="#f1d39a" font-family="DejaVu Sans" font-size="24">Diseño de arquitectura documentado · No certifica todos los recursos</text>
+</svg>

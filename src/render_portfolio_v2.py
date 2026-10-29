@@ -54,16 +54,18 @@ def page(kind: str, markup: str, narration: str, project: str | None = None) -> 
     return {"kind": kind, "markup": markup, "narration": narration, "repo": project}
 
 
-def build_slides(data: dict, latest: list[dict] | None = None) -> list[dict]:
+def build_slides(data: dict, latest: list[dict] | None = None,
+                 generation_stamp: str = "Vista previa") -> list[dict]:
     projects = data["projects"]
     slides = [
         page("cover",
              '<div class="pf-line"></div>'
              '<p class="pf-eyebrow">PORTFOLIO · ENGINEERING / SOFTWARE</p>'
+             f'<p class="pf-byline">{esc(data["author"])}</p>'
              f'<h1>{esc(data["title"])}</h1>'
              f'<p class="pf-cover-subtitle">{esc(data["subtitle"])}</p>'
              f'<div class="pf-cover-footer"><span>{len(projects)} PROYECTOS DESTACADOS</span>'
-             f'<span>{esc(data["edition"])}</span></div>',
+             f'<span>{esc(data["edition"])} · GENERADO {esc(generation_stamp)}</span></div>',
              f'Presentamos una selección de {len(projects)} proyectos públicos de ingeniería y desarrollo de software, con capacidades documentadas y límites explícitos.'),
         page("overview",
              '<div class="pf-meta">01 / MAPA DE PROYECTOS</div>'
@@ -95,21 +97,43 @@ def build_slides(data: dict, latest: list[dict] | None = None) -> list[dict]:
             + (f'<a href="{esc(p["demo_url"])}">Visitar sitio público ↗</a>' if p.get("demo_url") else "")
             + '</div></div>' + image_html(p, "hero_image", "pf-shot pf-hero-shot") + '</div>',
             f'{p["title"]}. {p["problem"]} {p["solution"]}', repo))
-        gallery = image_html(p, "detail_image", "pf-shot pf-gallery-image")
-        if p.get("second_image"):
-            gallery += image_html(p, "second_image", "pf-shot pf-gallery-image")
+        features = "".join(
+            f'<div class="pf-feature"><span class="pf-feature-number">0{i}</span>'
+            f'<p>{esc(item)}</p></div>' for i,item in enumerate(p["capabilities"],1))
+        points = "".join(
+            f'<a class="pf-proofpoint" href="{esc(point["source"])}">'
+            f'<strong>{esc(point["label"])}</strong><span>{esc(point["detail"])}</span>'
+            f'<small>Ver evidencia ↗</small></a>' for point in p.get("proof_points", []))
         slides.append(page(
             "capabilities",
-            f'<div class="pf-meta">0{index+1} / {esc(p["title"].upper())} · PRODUCTO</div>'
-            '<h2>Qué ofrece y cómo se utiliza</h2>'
-            '<div class="pf-cap-grid">'
-            '<div class="pf-cap-list">'
-            + "".join(f'<div class="pf-cap"><span>0{i}</span><p>{esc(item)}</p></div>'
-                      for i, item in enumerate(p["capabilities"], start=1))
-            + '</div><div class="pf-gallery">' + gallery + '</div></div>'
-            f'<p class="pf-bottom-note">Capturas versionadas · No se presentan como prueba de despliegue actual.</p>',
-            f'Entre las capacidades documentadas de {p["title"]} destacan: '
-            + "; ".join(p["capabilities"]) + ".", repo))
+            f'<div class="pf-meta">0{index+1} / {esc(p["title"].upper())} · CAPACIDADES</div>'
+            '<h2>Qué está documentado y qué se ha demostrado</h2>'
+            '<div class="pf-feature-grid">' + features + '</div>'
+            '<p class="pf-mini pf-proof-heading">HECHOS Y REFERENCIAS CONCRETAS</p>'
+            '<div class="pf-proof-grid">' + points + '</div>'
+            '<p class="pf-bottom-note">Los resultados observados se limitan a los casos '
+            'indicados y no certifican todo el producto.</p>',
+            f'{p["title"]}: ' + " ".join(p["capabilities"])
+            + " Resultados con fuentes: " + "; ".join(point["label"] + ": " + point["detail"]
+                                                      for point in p.get("proof_points", [])), repo))
+        for walk in p["walkthroughs"]:
+            image = image_html(p, walk["image_field"], "pf-shot pf-walk-shot")
+            steps = "".join(
+                f'<div class="pf-walk-step"><b>0{i}</b><p>{esc(step)}</p></div>'
+                for i,step in enumerate(walk["steps"],1))
+            slides.append(page(
+                "walkthrough",
+                f'<div class="pf-meta">0{index+1} / {esc(p["title"].upper())} · CASO CONCRETO</div>'
+                f'<h2>{esc(walk["title"])}</h2>'
+                f'<p class="pf-walk-intro">{esc(walk["description"])}</p>'
+                '<div class="pf-walk-layout"><div class="pf-walk-photo">'
+                + image + '</div><div class="pf-walk-guide">'
+                + f'<span class="pf-walk-status">{esc(walk["state"])}</span>'
+                + steps
+                + f'<a class="pf-walk-evidence" href="{esc(walk["source"])}">Ver fuente de la afirmación ↗</a>'
+                + '</div></div>',
+                f'Caso de {p["title"]}: {walk["title"]}. {walk["description"]} '
+                + " ".join(walk["steps"]) + " Evidencia referenciada en el documento.", repo))
         evidences = "".join(
             f'<a class="pf-evidence" href="{esc(x["url"])}">'
             f'<strong>{esc(x["label"])}</strong><span>{esc(x["description"])}</span>'
@@ -174,13 +198,16 @@ def render_markdown(slides: list[dict]) -> str:
 
 def write_preview(*, pdf: bool = True) -> tuple[list[dict], Path]:
     data = load_portfolio()
-    slides = build_slides(data, recent_activity(data["projects"]))
+    generated_utc = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
+    slides = build_slides(data, recent_activity(data["projects"]), generation_stamp=generated_utc)
     markdown = render_markdown(slides)
     MD_PATH.parent.mkdir(parents=True, exist_ok=True)
     MD_PATH.write_text(markdown, encoding="utf-8")
     manifest = {
         "schema": 2,
         "source": "content/portfolio/projects.yml",
+        "generated_utc": generated_utc,
+        "evidence_cutoff": data["edition"],
         "project_revisions": {p["repo"]: p["revision"] for p in data["projects"]},
         "slides": [{"index": index, "kind": s["kind"], "repo": s["repo"], "narration": s["narration"]}
                    for index, s in enumerate(slides, 1)],
@@ -194,6 +221,25 @@ def write_preview(*, pdf: bool = True) -> tuple[list[dict], Path]:
         subprocess.run([marp, str(MD_PATH), "--pdf", "--no-stdin", "--html",
                         "--allow-local-files", "--theme-set", str(THEME),
                         "-o", str(PDF_PATH)], check=True)
+        # Chromium/Marp uses a temporary HTML filename as its title by default.
+        # Explicit PDF metadata is part of the public deliverable, not cosmetic only.
+        try:
+            import pymupdf
+        except ImportError as exc:
+            raise RuntimeError("PyMuPDF es obligatorio para fijar metadatos PDF") from exc
+        final_tmp = PDF_PATH.with_suffix(".metadata.pdf")
+        with pymupdf.open(PDF_PATH) as document:
+            metadata = dict(document.metadata)
+            metadata.update({
+                "title": data["title"] + " — Portfolio Editorial",
+                "author": data["author"],
+                "subject": "Portfolio verificable de automatización industrial y desarrollo web",
+                "keywords": "portfolio, ingeniería, software, evidencias, proyectos",
+                "creator": "Devlog Weekly · Portfolio Editorial V2",
+            })
+            document.set_metadata(metadata)
+            document.save(final_tmp, garbage=4, deflate=True)
+        final_tmp.replace(PDF_PATH)
     LOG.info("%d diapositivas documentadas en %s", len(slides), MD_PATH)
     return slides, MD_PATH
 

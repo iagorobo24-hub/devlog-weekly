@@ -47,6 +47,7 @@ def load_portfolio(path: Path = DATA_PATH) -> dict:
     if not isinstance(data, dict) or data.get("version") != 2:
         raise ValueError("schema de portfolio desconocido")
     require_text(data.get("edition"), "edition")
+    require_text(data.get("author"), "author", 100)
     require_text(data.get("title"), "title")
     require_text(data.get("subtitle"), "subtitle")
     require_text(data.get("editorial_note"), "editorial_note", 400)
@@ -80,6 +81,26 @@ def load_portfolio(path: Path = DATA_PATH) -> dict:
             require_text(item.get("description"), "evidence.description", 220)
             if not valid_link(item.get("url", ""), repo, revision):
                 raise ValueError(f"{repo}: evidencia sin procedencia válida")
+        for proof in project.get("proof_points", []):
+            require_text(proof.get("label"), f"{repo}.proof.label", 70)
+            require_text(proof.get("detail"), f"{repo}.proof.detail", 200)
+            if not valid_link(proof.get("source", ""), repo, revision):
+                raise ValueError(f"{repo}: prueba sin enlace versionado")
+        walkthroughs = project.get("walkthroughs")
+        if not isinstance(walkthroughs, list) or not 1 <= len(walkthroughs) <= 3:
+            raise ValueError(f"{repo}: se exige un recorrido concreto (máximo tres)")
+        for walk in walkthroughs:
+            for field in ("title", "state", "description"):
+                require_text(walk.get(field), f"{repo}.walk.{field}", 250)
+            if walk.get("image_field") not in IMG_FIELDS or not project.get(walk["image_field"]):
+                raise ValueError(f"{repo}: recorrido sin captura validable")
+            if not valid_link(walk.get("source", ""), repo, revision):
+                raise ValueError(f"{repo}: recorrido sin evidencia versionada")
+            steps = walk.get("steps")
+            if not isinstance(steps, list) or len(steps) != 3:
+                raise ValueError(f"{repo}: recorrido exige tres pasos")
+            for step in steps:
+                require_text(step, f"{repo}.walk.step", 170)
         assets = project.get("asset_sources", {})
         for field in IMG_FIELDS:
             name = project.get(field)

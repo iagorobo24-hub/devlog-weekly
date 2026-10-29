@@ -92,6 +92,16 @@ def create_segment(image: Path, audio: Path, destination: Path, duration: float)
          "-r", "25", "-movflags", "+faststart", str(destination)])
 
 
+def clean_narration(text: str) -> str:
+    """Normalize concatenated facts before speech AND subtitle generation."""
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    cleaned = re.sub(r"\.+\s*;", ";", cleaned)
+    cleaned = re.sub(r"([.!?])\1+", r"\1", cleaned)
+    cleaned = re.sub(r";[.;]+", ";", cleaned)
+    cleaned = re.sub(r"\s+([,.;!?])", r"\1", cleaned)
+    return cleaned
+
+
 def srt_stamp(seconds: float) -> str:
     millis = max(0, round(seconds * 1000))
     hours, rem = divmod(millis, 3_600_000)
@@ -108,7 +118,7 @@ def build_subtitles(scripts: list[str], segment_durations: list[float]) -> str:
     index = 1
     for text, duration in zip(scripts, segment_durations):
         # Slide-by-slide timing, with text broken into readable captions.
-        tokens = text.split()
+        tokens = clean_narration(text).split()
         chunks, current = [], []
         for token in tokens:
             if current and len(" ".join(current + [token])) > 76:
@@ -136,13 +146,14 @@ def render(*, image_dir: Path | None = None, smoke: bool = False,
     if not smoke and not shutil.which("edge-tts"):
         raise RuntimeError("edge-tts no disponible")
     data = load_portfolio()
-    slides = build_slides(data, recent_activity(data['projects']))
-    expected_md = render_markdown(slides)
-    if not MD_PATH.exists() or MD_PATH.read_text(encoding="utf-8") != expected_md:
-        raise ValueError("portfolio-v2.md no coincide con las fichas de proyecto; regenerar")
     if not MANIFEST_PATH.exists():
         raise ValueError("falta el manifiesto de diapositivas")
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    slides = build_slides(data, recent_activity(data['projects']),
+                          generation_stamp=manifest.get("generated_utc", "Vista previa"))
+    expected_md = render_markdown(slides)
+    if not MD_PATH.exists() or MD_PATH.read_text(encoding="utf-8") != expected_md:
+        raise ValueError("portfolio-v2.md no coincide con las fichas de proyecto; regenerar")
     if [s["narration"] for s in slides] != [s["narration"] for s in manifest["slides"]]:
         raise ValueError("guion desincronizado con el manifiesto")
     if WORK_DIR.resolve().is_symlink() or WORK_DIR.is_symlink():
@@ -158,7 +169,7 @@ def render(*, image_dir: Path | None = None, smoke: bool = False,
         stem = f"{n:03}"
         audio = WORK_DIR / f"audio-{stem}.mp3"
         movie = WORK_DIR / f"clip-{stem}.mp4"
-        synthesize_audio(slide["narration"], audio, voice, smoke=smoke)
+        synthesize_audio(clean_narration(slide["narration"]), audio, voice, smoke=smoke)
         duration = audio_duration(audio) + 0.35
         create_segment(img, audio, movie, duration)
         lengths.append(duration)

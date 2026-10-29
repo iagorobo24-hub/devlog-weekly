@@ -23,7 +23,8 @@ class EditorialPortfolioTests(unittest.TestCase):
 
     def test_semantic_pages_not_word_fragments(self):
         slides = build_slides(self.data)
-        self.assertEqual(len(slides), 2 + 3 * len(self.data["projects"]) + 1)
+        self.assertEqual(len(slides), 2 + 3 * len(self.data["projects"])
+                         + sum(len(p["walkthroughs"]) for p in self.data["projects"]) + 1)
         self.assertEqual([s["kind"] for s in slides[:2]], ["cover", "overview"])
         for p in self.data["projects"]:
             for kind in ("project", "capabilities", "evidence"):
@@ -62,11 +63,29 @@ class EditorialPortfolioTests(unittest.TestCase):
             self.assertEqual(len(activity),1)
             self.assertEqual(len(activity[0]["events"]),1)
             pages=build_slides(self.data,activity)
-            self.assertEqual(len(pages), 10)
+            self.assertEqual(len(pages), 13)
             md=render_markdown(pages)
             self.assertIn("/commit/"+sha,md)
             self.assertNotIn("ejecución desplegada y perfecta",md)
             self.assertNotIn("attacker.example",md)
+
+    def test_each_walkthrough_has_a_real_figure_and_pinned_link(self):
+        slides = build_slides(self.data)
+        for project in self.data["projects"]:
+            walkthroughs = [s for s in slides if s["repo"] == project["repo"]
+                            and s["kind"] == "walkthrough"]
+            self.assertEqual(len(walkthroughs), len(project["walkthroughs"]))
+            for slide, walk in zip(walkthroughs, project["walkthroughs"]):
+                self.assertIn('class="pf-shot pf-walk-shot"', slide["markup"])
+                self.assertIn(walk["source"], slide["markup"])
+                for step in walk["steps"]:
+                    self.assertIn(step, slide["markup"])
+
+    def test_author_and_generation_dates_are_distinct(self):
+        slides = build_slides(self.data, generation_stamp="29/10/2026 07:30 UTC")
+        self.assertIn(self.data["author"], slides[0]["markup"])
+        self.assertIn("GENERADO 29/10/2026 07:30 UTC", slides[0]["markup"])
+        self.assertIn(self.data["edition"], slides[0]["markup"])
 
     def test_disallow_html_in_editorial_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -100,7 +119,7 @@ class EditorialPortfolioTests(unittest.TestCase):
             out = Path(tmp)
             with patch.object(renderer,"MD_PATH",out/"preview.md"),patch.object(renderer,"MANIFEST_PATH",out/"manifest.json"):
                 slides, markdown_path = write_preview(pdf=False)
-                self.assertEqual(len(slides), 9)
+                self.assertEqual(len(slides), 12)
                 self.assertTrue(markdown_path.is_file())
                 self.assertTrue((out/"manifest.json").is_file())
                 self.assertIn('"published_to_drive": false', (out/"manifest.json").read_text())

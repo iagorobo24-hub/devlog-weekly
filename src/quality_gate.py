@@ -52,6 +52,9 @@ def check_pdf(path: Path, manifest: Path) -> dict:
     with fitz.open(path) as doc:
         if not doc.is_pdf or doc.is_encrypted or len(doc) != len(slides):
             raise ValueError(f"páginas PDF inesperadas: {len(doc)} != {len(slides)}")
+        expected_title = data["title"] + " — Portfolio Editorial"
+        if doc.metadata.get("title") != expected_title or doc.metadata.get("author") != data["author"]:
+            raise ValueError("PDF sin metadatos editoriales de título y autor")
         text_all, links, image_total = [], [], 0
         for i, pg in enumerate(doc):
             words = pg.get_text("words")

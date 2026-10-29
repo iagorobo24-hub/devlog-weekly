@@ -21,6 +21,15 @@ class PortfolioVideoContracts(unittest.TestCase):
             self.assertEqual(len(video.numbered_images(p)),11)
             self.assertEqual(video.numbered_images(p)[9].name,"slide.010.png")
 
+    def test_spoken_text_and_subtitles_remove_duplicate_punctuation(self):
+        dirty = "documentadas.; Contratos UDT. recurso.. dato...; otro. "
+        clean = video.clean_narration(dirty)
+        self.assertNotIn(".;", clean)
+        self.assertNotIn("..", clean)
+        captions = video.build_subtitles([dirty], [8.0])
+        self.assertNotIn(".;", captions)
+        self.assertNotIn("..", captions)
+
     def test_subtitle_timing(self):
         text=video.build_subtitles(["hola mundo, una prueba completa",
                                     "otro texto algo más largo"],[3.4,2.1])

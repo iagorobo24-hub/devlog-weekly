@@ -69,7 +69,7 @@ jobs:
           PYCODE
       - name: Generar portfolio editorial V2 en vista previa aislada
         run: |
-          uv run python src/render_portfolio_v2.py
+          uv run --with pymupdf python src/render_portfolio_v2.py
           uv run python - <<'PYCODE'
           from src.portfolio_data import load_portfolio
           from src.render_portfolio_v2 import build_slides, MD_PATH, THEME
