@@ -61,7 +61,7 @@ perder la ventana ni duplicar narrativa.
 | Síntesis con LLM (cadena de modelos de NVIDIA NIM) | 🟡 | Implementada. Solo se comprueba que la respuesta traiga las cuatro claves esperadas; no se valida el contenido. |
 | Deck semanal (Marp → PDF) | ✅ | Generado y publicado en la ejecución W44. |
 | Deck maestro y vídeo narrado | ✅ | PDF y MP4 publicados en W44; faltan tests específicos. |
-| Publicación en Drive con rclone | 🟡 | Implementada; depende de un `rclone.conf` con OAuth propio. |
+| Publicación en Drive con rclone | 🟡 | W44 e histórico publicados; pendiente sustituir el cliente compartido por OAuth propio (#1). |
 | Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. La generación histórica de semanas individuales no está reconstruida. |
 | Tests automáticos | ✅ | 5 tests de regresión ejecutados con éxito en GitHub Actions el 29-10-2026. Cobertura todavía parcial. |
 
@@ -117,7 +117,7 @@ El workflow necesita permiso `contents: write` para guardar `state/`. El token t
 | Dónde | Para qué |
 |---|---|
 | `config/repos.yml` | Repos a seguir, `defaults.since_days` (ventana de la primera ejecución, 7 por defecto), `showcase` y `pitch`. |
-| `GH_PAT` | Token de GitHub para leer los repos (con repos privados hace falta uno con acceso). |
+| `GITHUB_TOKEN` / `GH_PAT` | Actions usa token temporal para cuatro repos públicos; `GH_PAT` es alternativa local. El recolector bloquea repos privados. |
 | `NVIDIA_API_KEY` | Clave de NVIDIA NIM (API compatible con OpenAI). `NIM_MODEL` o `--model` fuerzan un único modelo. |
 | `RCLONE_CONF`, `RCLONE_REMOTE` | Configuración de rclone y nombre del remote de Drive. |
 | `templates/` | Plantillas Jinja2 de los decks y tema Marp `theme.css`. |
@@ -130,7 +130,7 @@ Los secretos van en variables de entorno o en los secretos de Actions, nunca en 
 - **El texto lo escribe un modelo y nadie lo revisa.** Las narrativas y los titulares pueden contener errores o
   valoraciones no respaldadas por los commits. Revísalos antes de enseñarlos o publicarlos.
 - **Qué sale de tu máquina.** Al sintetizar se envían a NVIDIA NIM el título de los commits, issues y PRs, los tags y
-  la narrativa acumulada; con un `GH_PAT` que vea repos privados, eso incluye datos de repos privados. La narración del
+  la narrativa acumulada; se bloquean explícitamente los repositorios privados para evitar publicarlos. La narración del
   vídeo se envía al servicio de edge-tts (Microsoft) y el tema Marp carga fuentes de Google Fonts. El resultado se sube a
   tu Drive.
 - **El modelo ve títulos, no diffs.** Recibe los títulos de commits y las cifras agregadas, no el código.
@@ -225,3 +225,13 @@ Se utiliza `rclone copyto --immutable` para impedir sustituir otros
 archivos. En particular NO se modifica `Portfolio/semanal/`,
 `Portfolio/master/` ni el estado persistido de los repositorios.
 Las credenciales OAuth siguen viniendo exclusivamente de Actions Secrets.
+
+## Cierre de recuperación y pendientes documentados (29-10-2026)
+
+- [W44 real](https://github.com/iagorobo24-hub/devlog-weekly/actions/runs/40792023387): 4/4 repos, PDF semanal, portfolio maestro PDF/MP4 y commit de estado.
+- [Histórico](https://github.com/iagorobo24-hub/devlog-weekly/actions/runs/40794818343): ocho semanas, 17 archivos, subida con rclone inmutable a `Portfolio/historico-verificable/2026-W36__2026-W43/`.
+- [CI (16 pruebas aprobadas)](https://github.com/iagorobo24-hub/devlog-weekly/actions/runs/40795276188).
+- [Pendiente #1](https://github.com/iagorobo24-hub/devlog-weekly/issues/1): cliente OAuth propio de Google Drive y secretos GitHub.
+- [Pendiente #2](https://github.com/iagorobo24-hub/devlog-weekly/issues/2): baseline PSM inaccesible (GitHub 404); pendiente reconciliación y recertificación.
+
+La transferencia a Drive está comprobada mediante los registros de rclone. No se ha hecho todavía una lectura posterior independiente con comparación de hashes.
