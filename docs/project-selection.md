@@ -67,3 +67,58 @@ convencionales. Los cambios compartidos o ambiguos quedan sin asignar.
 El resultado es un indicio inferior de actividad: se deberá contrastar cada
 componente contra los archivos modificados antes de usarlo editorialmente.
 Este mapeo NO forma parte de GitHub, CI ni la presentación pública.
+
+## Fase de comprobación de evidencias y actividad local
+
+### Evidencia por archivos reales, nunca por ámbito solamente
+
+Los ámbitos de commits de un monorepo pueden señalar productos distintos
+aunque ambos modifiquen la misma carpeta de código. En modo privado existe
+una prueba acotada adicional:
+
+    uv run python -m src.select_projects --mode private-local --verify-file-paths
+
+Requiere un mapping local protegido, con listas de prefijos de directorio,
+junto a la configuración de componentes. Consulta como máximo cinco commits
+de código o tests por componente. La verificación agrupa resultados como
+exclusive, shared, mixed, no_path_match o fetch_error. Sólo acepta exclusividad
+si las rutas observadas pertenecen al componente y no coinciden con otros.
+Cuando dos componentes comparten la misma carpeta, se informa como shared,
+sin declarar exclusividad ni validación funcional. El informe **no almacena
+nombres de ficheros del repositorio privado**. Los cambios de pruebas no
+acreditan que las pruebas hayan pasado.
+
+### Inspección de worktrees autorizados
+
+Para registrar cambios locales todavía no representados por GitHub:
+
+    uv run python -m src.local_activity
+    uv run python -m src.local_activity --verify-remotes
+
+Consulta únicamente las rutas autorizadas en una lista protegida localmente.
+Usa consultas Git de solo lectura, sin git fetch, commit, reset, push ni
+modificaciones de otros agentes. No cuenta archivos sin seguimiento.
+La verificación optativa ejecuta git ls-remote para saber si la rama
+remota coincide con la referencia de seguimiento local, que podría estar
+desactualizada. Cuando no coincide, el supuesto número de commits locales
+por delante **no se presenta como un número verificado de commits sin subir**.
+
+La auditoría local no cambia puntuaciones; se guarda fuera del repositorio
+en un JSON privado (0700/0600). Si existe un mapeo privado y explícito
+entre las rutas y las identidades de proyectos, se puede combinar con la
+selección privada usando:
+
+    uv run python -m src.private_review
+
+El resultado separa cambios rastreados, ausencia de upstream y divergencias
+de referencias. No significa que los cambios estén terminados ni que la
+aplicación esté funcionando.
+
+### Alcance de lo que todavía queda
+
+La selección está equipada con señales reales de archivos y worktrees, pero
+no incluye por sí misma un ensayo E2E, análisis completo de cada diff,
+calificación objetiva de importancia estratégica o autorización para publicar
+proyectos privados. La incorporación a un PDF público sigue requiriendo
+autorización de contenido y fichas documentales versionadas. Todas estas
+operaciones quedan separadas del cron del portfolio maestro y de Drive.

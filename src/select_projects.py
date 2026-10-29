@@ -22,9 +22,11 @@ import yaml
 try:
     from src.project_selection_core import build_selection, configured_projects
     from src.component_selection import components_from_commits, read_private_mapping
+    from src.path_evidence import verify_paths
 except ModuleNotFoundError:
     from project_selection_core import build_selection, configured_projects
     from component_selection import components_from_commits, read_private_mapping
+    from path_evidence import verify_paths
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config" / "project-selection.yml"
@@ -138,7 +140,9 @@ def write_report(result: dict, target: Path, mode: str) -> None:
     output = ensure_safe_output(target, mode)
     items = [x for section in ("ranked", "other_active", "watchlist")
              for x in result.get(section, [])]
-    if mode == "public" and (result.get("component_hints") or result.get("visibility") != "public" or any(
+    if mode == "public" and (any(field in result for field in (
+            "component_hints", "path_evidence", "local_activity", "private_review"))
+            or result.get("visibility") != "public" or any(
             p.get("visibility") != "public" for p in items)):
         raise ValueError("datos privados bloqueados en publicación pública")
     if mode == "private-local" and (result.get("visibility") != "private-local" or any(
@@ -159,7 +163,10 @@ def write_report(result: dict, target: Path, mode: str) -> None:
 
 
 def run(*, mode: str = "public", now: datetime | None = None,
-        inventory: list[dict] | None = None, output: Path | None = None) -> dict:
+        inventory: list[dict] | None = None, output: Path | None = None,
+        verify_file_paths: bool = False) -> dict:
+    if verify_file_paths and mode != "private-local":
+        raise ValueError("verificación de diffs reservada a private-local")
     if mode == "private-local" and (os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS")):
         raise RuntimeError("nunca consultar repos privados desde el workflow")
     config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
@@ -179,6 +186,16 @@ def run(*, mode: str = "public", now: datetime | None = None,
             inventory, mapping, owner=config["owner"], now=now,
             recent_days=config["recent_days"], lookback_days=config["lookback_days"]
         ) if mapping else [])
+    if mode == "private-local" and verify_file_paths:
+        if not mapping:
+            raise ValueError("no hay mapeo privado para verificar rutas")
+        # Reuse a bounded GitHub client; do not persist raw filenames.
+        with Github(auth=Auth.Token(credentials()), per_page=100) as gh:
+            def fetch_files(repo_name: str, sha: str) -> list[str]:
+                return [f.filename for f in gh.get_repo(repo_name).get_commit(sha).files]
+            result["path_evidence"] = verify_paths(
+                inventory, mapping, owner=config["owner"], fetch_files=fetch_files,
+                sample_per_component=5)
     write_report(result, destination, mode)
     # Private report locations and candidate names are not logged/uploaded.
     LOG.info("%s: inventario de %d repositorios, %d candidatos; sin publicar ni tocar state",
@@ -189,9 +206,11 @@ def run(*, mode: str = "public", now: datetime | None = None,
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["public", "private-local"], default="public")
+    parser.add_argument("--verify-file-paths", action="store_true",
+                        help="Muestreo privado de cambios reales por componente; nunca en CI")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    result = run(mode=args.mode)
+    result = run(mode=args.mode, verify_file_paths=args.verify_file_paths)
     if args.mode == "public":
         print("Vista previa pública (no sustitución del portfolio):")
         for i, item in enumerate(result["ranked"], 1):
