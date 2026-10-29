@@ -58,3 +58,4 @@ una vista previa pública, sin publicar ni modificar el portfolio maestro.
 - La incorporación de un proyecto al PDF exige una ficha curada con
   fuentes, capturas, capacidades y limitaciones comprobadas. El selector
   nunca fabrica una ficha ni cambia automáticamente la presentación.
+\nLa segunda salida pública, out/project-selection-review.json, compara candidatos\ncon las fichas existentes e indica cuáles requieren evidencias nuevas. Nunca\npromueve proyectos automáticamente ni publica fichas sin una revisión.\n
