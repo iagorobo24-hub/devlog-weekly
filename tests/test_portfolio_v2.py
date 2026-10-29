@@ -89,13 +89,15 @@ class EditorialPortfolioTests(unittest.TestCase):
             self.assertIn(warnings[0]["url"],slides[-2]["markup"])
 
     def test_focus_images_preserve_real_resolution(self):
-        from PIL import Image
+        from struct import unpack
         root = Path(__file__).resolve().parent.parent
         project = self.data["projects"][1]
-        for field in ("detail_image","second_image"):
-            with Image.open(root / project[field]) as img:
-                self.assertGreaterEqual(img.width, 650)
-                self.assertGreaterEqual(img.height, 600)
+        for field in ("detail_image", "second_image"):
+            data = (root / project[field]).read_bytes()
+            self.assertEqual(data[:8], bytes.fromhex("89504e470d0a1a0a"))
+            width, height = unpack(">II", data[16:24])
+            self.assertGreaterEqual(width, 650)
+            self.assertGreaterEqual(height, 600)
 
     def test_each_walkthrough_has_a_real_figure_and_pinned_link(self):
         slides = build_slides(self.data)
