@@ -29,7 +29,7 @@ def fixture():
         "candidates": [
             {"repo": p["repo"], "head": p["revision"], "visibility": "public",
              "approved_for_release": False}
-            for p in projects if p["repo"] != "iagorobo24-hub/proyecto-pfc-iago-duran",
+            for p in projects if p["repo"] != "iagorobo24-hub/proyecto-pfc-iago-duran"
         ],
     }
     return spec, editorial, release, published
