@@ -2,7 +2,7 @@ version: 1
 id: tia-rocaroibas
 title: TIA Portal RocaRoibas — agentes y Openness
 repo: iagorobo24-hub/T-IA-Portal-RocaRoibas
-revision: 7cea954b03b26532b4c28bdf3e3cef76c3a953d2
+revision: 5bb5397297724e2c3a4c1c7e67b4132368f12516
 visibility: public
 editorial_status: draft_only
 pitch: "Workspace para agentes de IA que trabajan con TIA Portal mediante herramientas MCP y contratos de operación."

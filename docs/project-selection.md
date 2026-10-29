@@ -241,3 +241,25 @@ el diseño del PDF y Google Drive permanecen inalterados.
 El preflight también rechaza instantáneas de selección o calidad con más
 de 36 horas, marcas temporales futuras, y seguimiento público
 contaminado por elementos privados.
+
+## Deck de comparación exclusivamente editorial
+
+La nueva salida de src.render_portfolio_review conserva las diapositivas
+del portfolio vigente, incorpora una página de revisión, un índice de
+candidatos públicos y fichas provisionales con referencias SHA para
+aquellos que tienen pruebas documentales. Cada página añade
+BORRADOR INTERNO - NO PUBLICAR.
+
+El workflow automático crea únicamente Markdown y un manifiesto
+con hash SHA-256. No requiere Chrome, no genera el PDF oficial y no
+publica en Drive. En una máquina de edición, el mismo comando genera
+HTML aislado; opcionalmente se convierte a PDF con Marp y Chrome,
+fuera de portfolio-v2.pdf.
+
+La ficha de TIA Portal RocaRoibas verifica referencias de la revisión
+5bb5397297724e2c3a4c1c7e67b4132368f12516: README, pruebas,
+workflow y recurso visual. La CI de ese SHA terminó correctamente.
+Eso no prueba una sesión real de TIA Portal ni de Openness/PLCSIM.
+
+PSM: la línea base histórica sigue sin reconciliar; esta ampliación de
+la revisión no cambia psm.source.commit.

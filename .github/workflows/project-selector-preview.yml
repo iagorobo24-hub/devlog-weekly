@@ -52,6 +52,8 @@ jobs:
         run: uv run python -m src.editorial_preview
       - name: Verificar controles de aprobación editorial pública
         run: uv run python -m src.portfolio_release_review
+      - name: Generar comparativa de revisión sin sustituir el portfolio
+        run: uv run python -m src.render_portfolio_review --no-html
       - uses: actions/upload-artifact@v4
         with:
           name: project-selection-public-preview
@@ -63,5 +65,7 @@ jobs:
             out/project-strategy-public.json
             out/portfolio-content-proposal.md
             out/portfolio-release-review.json
+            out/portfolio-review-v2.md
+            out/portfolio-review-v2-manifest.json
           if-no-files-found: error
           retention-days: 14
