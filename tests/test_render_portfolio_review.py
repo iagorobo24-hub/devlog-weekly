@@ -27,7 +27,8 @@ class ComparisonSlidesTests(unittest.TestCase):
             "candidates": [
                 {"repo": REPO, "title": "Test", "visibility": "public",
                  "approved_for_release": False, "ci_status": "success_at_head",
-                 "head": SHA, "blockers": ["explicit_editorial_approval_missing"]}
+                 "head": SHA, "source_presence_verified_at_revision": True,
+                 "blockers": ["explicit_editorial_approval_missing"]}
             ],
             "selection_generated_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -57,6 +58,13 @@ class ComparisonSlidesTests(unittest.TestCase):
         self.assertEqual(len([x for x in once if x["kind"] == "project"]), 2)
         self.assertTrue(all("NO PUBLICAR" in x["markup"] for x in once))
 
+    def test_ci_link_separates_execution_from_workflow_file(self):
+        url = f"https://github.com/{REPO}/actions/runs/98765"
+        self.report["candidates"][0]["ci_run_url_at_head"] = url
+        self.assertIn(url, self.build()[-2]["markup"])
+        self.report["candidates"][0]["ci_run_url_at_head"] = None
+        self.assertIn("No se ha demostrado CI correcta", self.build()[-2]["markup"])
+
     def test_malicious_editorial_title_is_escaped(self):
         self.profiles["drafts"][0]["title"] = "<script>attack()</script>"
         slides = self.build()
@@ -79,6 +87,10 @@ class ComparisonSlidesTests(unittest.TestCase):
 
     def test_old_revision_omits_claim_page(self):
         self.profiles["drafts"][0]["revision"] = "b" * 40
+        self.assertFalse(any(x["kind"] == "review-candidate" for x in self.build()))
+
+    def test_no_source_audit_omits_claim_page(self):
+        self.report["candidates"][0]["source_presence_verified_at_revision"] = False
         self.assertFalse(any(x["kind"] == "review-candidate" for x in self.build()))
 
     def test_foreign_source_omits_claim_page(self):

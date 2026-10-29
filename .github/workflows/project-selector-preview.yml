@@ -46,6 +46,10 @@ jobs:
         run: uv run python -m src.selection_review
       - name: Validar borradores públicos de nuevos proyectos
         run: uv run python -m src.candidate_profiles
+      - name: Auditar URLs reales de fuentes públicas en SHA
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run python -m src.audit_candidate_sources
       - name: Selección estratégica con evidencia y prioridades explícitas
         run: uv run python -m src.strategic_selection
       - name: Generar propuesta de contenidos de portfolio sin publicar
@@ -62,6 +66,7 @@ jobs:
             out/project-selection-review.json
             out/project-quality-public.json
             out/candidate-profiles-review.json
+            out/candidate-source-audit-public.json
             out/project-strategy-public.json
             out/portfolio-content-proposal.md
             out/portfolio-release-review.json

@@ -97,7 +97,8 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
         "de cada proyecto requieren evaluación independiente."))
     for c in candidates:
         d = available.get(c["repo"])
-        if not d or d.get("revision") != c.get("head"):
+        if (not d or d.get("revision") != c.get("head")
+                or c.get("source_presence_verified_at_revision") is not True):
             continue
         if not _pinned_sources(d, c["repo"], d["revision"]):
             continue
@@ -109,7 +110,12 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
             '<b>↗</b></a>'
             for source in d["sources"][:3])
         state = esc(c.get("ci_status", "unknown"))
-        warnings = ", ".join(d.get("warnings", [])) or "CI y referencias revisadas en HEAD"
+        actual_ci = c.get("ci_run_url_at_head")
+        ci_proof = ('<p class="pf-state"><a href="' + esc(actual_ci) +
+                    '">Ver ejecución CI correcta en el HEAD ↗</a></p>'
+                    if actual_ci else
+                    '<p class="pf-limit">No se ha demostrado CI correcta en el HEAD.</p>')
+        warnings = ", ".join(d.get("warnings", [])) or "Fuentes presentes en SHA; CI revisada por separado"
         markup = (
             '<div class="pf-meta">CANDIDATO / FICHA NO APROBADA</div>'
             '<h2>' + esc(d["title"]) + '</h2>'
@@ -118,7 +124,8 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
             '<div class="pf-evidence-grid"><div>'
             '<div class="pf-status">BORRADOR · CI: ' + state + '</div>'
             '<p class="pf-state">Commit de revisión: ' + esc(d["revision"][:12]) + '</p>'
-            '<p class="pf-limit">Pendiente: ' + esc(warnings) + '</p>'
+            + ci_proof
+            + '<p class="pf-limit">Pendiente: ' + esc(warnings) + '</p>'
             '<p class="pf-limit">Faltan pruebas funcionales, capturas reales '
             'autorizadas y aprobación editorial.</p>'
             '</div><div class="pf-evidence-list">'

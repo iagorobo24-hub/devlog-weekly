@@ -263,3 +263,23 @@ Eso no prueba una sesión real de TIA Portal ni de Openness/PLCSIM.
 
 PSM: la línea base histórica sigue sin reconciliar; esta ampliación de
 la revisión no cambia psm.source.commit.
+
+## Comprobación real de enlaces de las fichas públicas
+
+La auditoría src.audit_candidate_sources valida referencias contra el
+contenido GitHub del SHA exacto, después de verificar que el repositorio
+es público. Comprueba archivo frente a directorio y distingue fuente
+presente, 404, tipo erróneo, fallo transitorio y revisión obsoleta.
+No lee repositorios privados. La API con errores de cuota nunca se
+traduce en éxito; tampoco en un falso archivo inexistente.
+
+La revisión editorial exige el informe sincronizado con calidad y
+selección. Una fuente sin comprobación bloquea sus diapositivas
+candidatas. Cuando hay CI exitosa comprobada en el HEAD, se conserva
+por separado el enlace de su ejecución, nunca se confunde con el
+archivo de configuración del workflow.
+
+La existencia de un archivo sólo prueba procedencia documental, no
+que la afirmación sea cierta o esté funcionando. Se preservan las tres
+puertas pendientes: prueba funcional independiente, evidencias visuales
+autorizadas y aprobación del propietario.

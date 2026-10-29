@@ -39,10 +39,23 @@ class ReleasePreviewTests(unittest.TestCase):
                         "sources": [{"statement": "Verified file is present in repository",
                                      "url": f"https://github.com/{REPO}/blob/{HEAD}/README.md"}]}]}
         self.portfolio = load_portfolio()
+        self.source_audit = {
+            "schema": 1, "visibility": "public", "generated_at": timestamp,
+            "source_selection_generated_at": timestamp,
+            "source_quality_generated_at": timestamp,
+            "no_private_data": True, "not_functionality_validation": True,
+            "automatic_publication": False,
+            "probes": [{"repo": REPO, "visibility": "public", "revision": HEAD,
+                        "quality_head_matches_revision": True,
+                        "all_sources_exist_at_pinned_revision": True,
+                        "ci_run_url_at_head": None,
+                        "sources": [{"url": self.drafts["drafts"][0]["sources"][0]["url"],
+                                     "status": "present"}]}],
+        }
 
     def report(self):
         return build_review(self.selection, self.quality, self.strategy,
-                            self.drafts, self.portfolio,
+                            self.drafts, self.portfolio, self.source_audit,
                             now=datetime(2026, 10, 29, 15, tzinfo=timezone.utc))
 
     def test_successful_ci_does_not_authorize_publication(self):
@@ -67,12 +80,12 @@ class ReleasePreviewTests(unittest.TestCase):
 
     def test_stale_or_foreign_claims_never_become_evidence(self):
         self.drafts["drafts"][0]["revision"] = "b" * 40
-        self.assertIn("editorial_evidence_stale_or_unverified",
-                      self.report()["candidates"][0]["blockers"])
+        with self.assertRaisesRegex(ValueError, "no corresponde"):
+            self.report()
         self.drafts["drafts"][0]["revision"] = HEAD
         self.drafts["drafts"][0]["sources"][0]["url"] = "https://attacker.test/file"
-        self.assertIn("editorial_evidence_stale_or_unverified",
-                      self.report()["candidates"][0]["blockers"])
+        with self.assertRaisesRegex(ValueError, "contradictorias"):
+            self.report()
 
     def test_private_quality_or_overflow_rejected(self):
         self.quality["records"][0]["visibility"] = "private"
@@ -109,6 +122,7 @@ class ReleasePreviewTests(unittest.TestCase):
 
     def test_stale_quality_report_rejected(self):
         self.quality["generated_at"] = "2026-10-20T12:00:00+00:00"
+        self.source_audit["source_quality_generated_at"] = self.quality["generated_at"]
         with self.assertRaisesRegex(ValueError, "obsoleto"):
             self.report()
 
@@ -116,6 +130,7 @@ class ReleasePreviewTests(unittest.TestCase):
         self.selection["generated_at"] = "2026-11-01T12:00:00+00:00"
         self.quality["source_selection_generated_at"] = self.selection["generated_at"]
         self.strategy["selection_generated_at"] = self.selection["generated_at"]
+        self.source_audit["source_selection_generated_at"] = self.selection["generated_at"]
         with self.assertRaisesRegex(ValueError, "futuro"):
             self.report()
 
@@ -123,6 +138,40 @@ class ReleasePreviewTests(unittest.TestCase):
         self.selection["watchlist"] = [{"visibility": "private"}]
         with self.assertRaisesRegex(ValueError, "contaminado"):
             self.report()
+
+    def test_missing_source_blocks_release(self):
+        self.source_audit["probes"][0]["all_sources_exist_at_pinned_revision"] = False
+        self.source_audit["probes"][0]["sources"][0]["status"] = "missing"
+        row = self.report()["candidates"][0]
+        self.assertFalse(row["source_presence_verified_at_revision"])
+        self.assertIn("source_paths_missing_or_not_verified_at_revision", row["blockers"])
+
+    def test_unrelated_source_audit_rejected(self):
+        self.source_audit["source_selection_generated_at"] = "old"
+        with self.assertRaisesRegex(ValueError, "desincronizada"):
+            self.report()
+
+    def test_private_source_audit_rejected(self):
+        self.source_audit["probes"][0]["visibility"] = "private"
+        with self.assertRaisesRegex(ValueError, "privad"):
+            self.report()
+
+    def test_audit_cannot_substitute_different_url(self):
+        self.source_audit["probes"][0]["sources"][0]["url"] = "https://attacker.test/file"
+        with self.assertRaisesRegex(ValueError, "contradictorias"):
+            self.report()
+
+    def test_fabricated_ci_run_link_rejected(self):
+        self.source_audit["probes"][0]["ci_run_url_at_head"] = (
+            f"https://github.com/{REPO}/actions/runs/999")
+        with self.assertRaisesRegex(ValueError, "contradictoria"):
+            self.report()
+
+    def test_ci_link_must_match_quality_evidence(self):
+        url = f"https://github.com/{REPO}/actions/runs/123"
+        self.source_audit["probes"][0]["ci_run_url_at_head"] = url
+        self.quality["records"][0]["ci"]["run_url"] = url
+        self.assertEqual(self.report()["candidates"][0]["ci_run_url_at_head"], url)
 
     def test_historical_is_not_an_automatic_replacement(self):
         self.strategy["historical_watchlist"] = [{

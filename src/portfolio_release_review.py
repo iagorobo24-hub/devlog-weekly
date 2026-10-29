@@ -16,6 +16,7 @@ INPUTS = {
     "quality": ROOT / "out/project-quality-public.json",
     "strategy": ROOT / "out/project-strategy-public.json",
     "drafts": ROOT / "out/candidate-profiles-review.json",
+    "source_audit": ROOT / "out/candidate-source-audit-public.json",
 }
 OUTPUT = ROOT / "out/portfolio-release-review.json"
 
@@ -55,7 +56,8 @@ def _pinned_sources(draft: dict, repo: str, revision: str) -> bool:
 
 
 def build_review(selection: dict, quality: dict, strategy: dict,
-                 drafts: dict, portfolio: dict, *, now: datetime | None = None) -> dict:
+                 drafts: dict, portfolio: dict, source_audit: dict,
+                 *, now: datetime | None = None) -> dict:
     for label, report in (("selection", selection), ("quality", quality),
                           ("strategy", strategy), ("drafts", drafts)):
         if not isinstance(report, dict) or report.get("visibility") != "public":
@@ -65,11 +67,20 @@ def build_review(selection: dict, quality: dict, strategy: dict,
     if (strategy.get("selection_generated_at") != selection.get("generated_at")
             or quality.get("source_selection_generated_at") != selection.get("generated_at")):
         raise ValueError("Fuentes de selección no coinciden")
+    if (not isinstance(source_audit, dict) or source_audit.get("schema") != 1
+            or source_audit.get("visibility") != "public"
+            or source_audit.get("automatic_publication") is not False
+            or source_audit.get("not_functionality_validation") is not True
+            or source_audit.get("no_private_data") is not True
+            or source_audit.get("source_selection_generated_at") != selection.get("generated_at")
+            or source_audit.get("source_quality_generated_at") != quality.get("generated_at")):
+        raise ValueError("Auditoría de fuentes ausente, privada o desincronizada")
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         raise ValueError("Fecha de revisión sin zona horaria")
     for label, stamp in (("selection", selection.get("generated_at")),
-                         ("quality", quality.get("generated_at"))):
+                         ("quality", quality.get("generated_at")),
+                         ("source_audit", source_audit.get("generated_at"))):
         try:
             observed = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
         except (AttributeError, ValueError) as exc:
@@ -102,7 +113,10 @@ def build_review(selection: dict, quality: dict, strategy: dict,
     checked = _index(quality.get("records"), visibility="public")
     ranked = _index(strategy.get("proposed_slate"), visibility="public")
     profiles = _index(drafts.get("drafts"), visibility="public")
+    audited = _index(source_audit.get("probes"), visibility="public")
     historical = _index(strategy.get("historical_watchlist", []), visibility="public")
+    if set(audited) != set(profiles):
+        raise ValueError("Cobertura de fuentes incompleta o sobrante")
     if set(active) != set(checked) or set(active) != set(ranked):
         raise ValueError("Cobertura activa incompleta")
     if set(active) & set(historical):
@@ -136,6 +150,36 @@ def build_review(selection: dict, quality: dict, strategy: dict,
             raise ValueError("Evidencia CI contradictoria")
         head = q.get("head")
         head_valid = isinstance(head, str) and bool(SHA_RE.fullmatch(head))
+        source_probe = audited.get(repo)
+        sources_present = False
+        ci_run_url = None
+        if draft:
+            if source_probe is None or source_probe.get("revision") != draft.get("revision"):
+                raise ValueError("La auditoría de fuentes no corresponde al borrador")
+            expected_sources = draft.get("sources")
+            observed_sources = source_probe.get("sources")
+            if not isinstance(expected_sources, list) or not isinstance(observed_sources, list):
+                raise ValueError("Auditoría de fuentes incompatible")
+            if len(expected_sources) != len(observed_sources):
+                raise ValueError("Cobertura incompleta de referencias")
+            if any(not isinstance(a, dict) or not isinstance(b, dict)
+                   or a.get("url") != b.get("url")
+                   or a.get("evidence_kind") != b.get("evidence_kind")
+                   for a, b in zip(expected_sources, observed_sources)):
+                raise ValueError("Referencias de auditoría contradictorias")
+            sources_present = (
+                source_probe.get("quality_head_matches_revision") is True
+                and source_probe.get("all_sources_exist_at_pinned_revision") is True
+                and len(observed_sources) > 0
+                and all(x.get("status") == "present" for x in observed_sources))
+            ci_run_url = source_probe.get("ci_run_url_at_head")
+            if ci_run_url is not None:
+                prefix = f"https://github.com/{repo}/actions/runs/"
+                if (not isinstance(ci_run_url, str) or not ci_run_url.startswith(prefix)
+                        or not ci_run_url[len(prefix):].isdigit()
+                        or ci != "success_at_head"
+                        or ci_run_url != q.get("ci", {}).get("run_url")):
+                    raise ValueError("Referencia CI ajena o contradictoria")
         blockers = []
         if ci == "failure_or_cancelled":
             blockers.append("ci_failure_needs_diagnosis")
@@ -143,6 +187,11 @@ def build_review(selection: dict, quality: dict, strategy: dict,
             blockers.append("ci_at_current_head_not_proven")
         if q.get("test_path_present") is not True:
             blockers.append("test_path_not_proven")
+        if draft and not sources_present:
+            blockers.append("source_paths_missing_or_not_verified_at_revision")
+        if draft and any(x.get("evidence_kind") == "ci_at_head" for x in draft.get("sources", [])):
+            if ci_run_url is None:
+                blockers.append("actual_ci_run_link_not_proven")
         if not draft:
             blockers.append("no_editorial_draft")
         elif (not head_valid or draft.get("revision") != head or draft.get("warnings")
@@ -156,6 +205,9 @@ def build_review(selection: dict, quality: dict, strategy: dict,
             "selection_bucket": bucket, "head": head if head_valid else None,
             "ci_status": ci, "editorial_tier": s.get("editorial_tier"),
             "currently_in_portfolio": repo in current,
+            "source_presence_verified_at_revision": sources_present,
+            "ci_run_url_at_head": ci_run_url,
+            "source_presence_is_not_statement_or_runtime_proof": True,
             "blockers": blockers, "approved_for_release": False,
         })
     return {
