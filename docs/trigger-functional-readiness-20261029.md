@@ -1,1 +1,1 @@
-One-shot public CI job steps and security audit, review only. No publication.
+Second public exact-head CI step attestation after real GitHub job-name normalization; no publication.

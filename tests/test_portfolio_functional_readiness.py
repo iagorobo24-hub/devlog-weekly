@@ -25,12 +25,12 @@ def jobs(repo,rid):
     if "pfc" in repo:
         states=[("Lint","success"),("Production dependency audit","failure"),
                 ("Unit tests","skipped"),("Production build","skipped"),
-                ("End-to-end tests","skipped")]
+                ("Install Playwright Chromium","skipped"),("End-to-end tests","skipped")]
         status="failure"
     elif "GuiaIA" in repo:
         states=[("Run unittest suite","success")];status="success"
     else:
-        states=[("Run Run-WorkspaceChecks.ps1","success")];status="success"
+        states=[("Run CI-safe workspace checks","success")];status="success"
     return {"total_count":1,"jobs":[{"conclusion":status,
         "steps":[{"name":name,"conclusion":state} for name,state in states]}]}
 
@@ -40,6 +40,9 @@ class ReadinessTests(unittest.TestCase):
         pfc=report["cases"][1]
         self.assertEqual(len(pfc["security_failures"]),1)
         self.assertEqual(len(pfc["checks_skipped"]),3)
+        self.assertTrue(all(item in pfc["checks_skipped"] for item in
+                            ("Unit tests", "Production build", "End-to-end tests")))
+        self.assertNotIn("Install Playwright Chromium", pfc["checks_skipped"])
         self.assertTrue(pfc["ci_jobs_consistent"])
         self.assertFalse(pfc["publication_approved"])
 
