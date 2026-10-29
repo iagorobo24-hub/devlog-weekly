@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import json
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -96,3 +97,48 @@ def load_portfolio(path: Path = DATA_PATH) -> dict:
                 raise ValueError(f"{repo}: falta procedencia de la imagen {field}")
             require_text(project.get(field.replace("_image", "_caption")), field + ".caption")
     return data
+
+
+def recent_activity(projects: list[dict], path: Path = ROOT / "out" / "summaries.json") -> list[dict]:
+    """Optional weekly metadata: only real GitHub URLs; no LLM prose or claims."""
+    if not path.is_file():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as exc:
+        raise ValueError("summaries.json inválido para actividad reciente") from exc
+    allow = {project["repo"]: project for project in projects}
+    results = []
+    for repo in payload.get("repos", []):
+        name = repo.get("name")
+        if name not in allow or repo.get("trivial", True):
+            continue
+        base = "https://github.com/" + name
+        events = []
+        for source in repo.get("verified_sources", []):
+            kind = source.get("kind")
+            url = source.get("url", "")
+            pattern = (
+                re.escape(base) + r"/commit/[0-9a-fA-F]{7,64}"
+                if kind == "commit" else
+                re.escape(base) + r"/pull/[0-9]+"
+                if kind == "pr" else
+                re.escape(base) + r"/issues/[0-9]+"
+                if kind == "issue" else ""
+            )
+            if not pattern or not re.fullmatch(pattern, url):
+                continue
+            title = source.get("title", "")
+            if not isinstance(title, str) or not title.strip():
+                continue
+            events.append({
+                "kind": kind, "title": " ".join(title.split())[:105],
+                "label": str(source.get("id", ""))[:24],
+                "date": str(source.get("date") or "")[:10],
+                "url": url,
+            })
+            if len(events) == 3:
+                break
+        if events:
+            results.append({"repo": name, "title": allow[name]["title"], "events": events})
+    return results

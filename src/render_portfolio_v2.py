@@ -14,9 +14,9 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 try:
-    from src.portfolio_data import ROOT, load_portfolio
+    from src.portfolio_data import ROOT, load_portfolio, recent_activity
 except ModuleNotFoundError:
-    from portfolio_data import ROOT, load_portfolio
+    from portfolio_data import ROOT, load_portfolio, recent_activity
 
 TEMPLATE_DIR = ROOT / "templates"
 THEME = TEMPLATE_DIR / "portfolio.css"
@@ -54,7 +54,7 @@ def page(kind: str, markup: str, narration: str, project: str | None = None) -> 
     return {"kind": kind, "markup": markup, "narration": narration, "repo": project}
 
 
-def build_slides(data: dict) -> list[dict]:
+def build_slides(data: dict, latest: list[dict] | None = None) -> list[dict]:
     projects = data["projects"]
     slides = [
         page("cover",
@@ -125,6 +125,27 @@ def build_slides(data: dict) -> list[dict]:
             + evidences + '</div></div>',
             f'El estado documentado de {p["title"]} es: {p["status"]}. '
             + p["status_detail"] + " Limitaciones: " + "; ".join(p["limitations"]) + ".", repo))
+    if latest:
+        recent_cards = []
+        for item in latest:
+            events = "".join(
+                f'<a class="pf-recent-row" href="{esc(event["url"])}">'
+                f'<span class="pf-recent-id">{esc(event["label"])} · {esc(event["date"])}</span>'
+                f'<span class="pf-recent-title">{esc(event["title"])}</span></a>'
+                for event in item["events"]
+            )
+            recent_cards.append(
+                f'<div class="pf-recent-card"><span class="pf-mini">{esc(item["title"])}</span>'
+                + events + '</div>')
+        slides.append(page(
+            "recent",
+            '<div class="pf-meta">ACTIVIDAD RECIENTE / FUENTES GITHUB</div>'
+            '<h2>Eventos nuevos, sin conclusiones inventadas.</h2>'
+            '<p class="pf-lead">Referencias de la última recolección; no acreditan despliegue ni funcionamiento.</p>'
+            '<div class="pf-two">' + "".join(recent_cards) + '</div>',
+            "Estos son los eventos públicos de GitHub registrados en la última recolección para los proyectos seleccionados. "
+            "Los títulos describen cambios declarados por sus autores; sus resultados deben validarse por separado."))
+
     cards = "".join(
         f'<div class="pf-project-summary"><span class="pf-mini">{esc(p["title"])}</span>'
         + "".join(f'<p class="pf-next-item">↗ {esc(step)}</p>' for step in p["next_steps"][:2])
@@ -150,7 +171,7 @@ def render_markdown(slides: list[dict]) -> str:
 
 def write_preview(*, pdf: bool = True) -> tuple[list[dict], Path]:
     data = load_portfolio()
-    slides = build_slides(data)
+    slides = build_slides(data, recent_activity(data["projects"]))
     markdown = render_markdown(slides)
     MD_PATH.parent.mkdir(parents=True, exist_ok=True)
     MD_PATH.write_text(markdown, encoding="utf-8")

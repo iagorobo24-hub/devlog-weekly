@@ -42,6 +42,31 @@ class EditorialPortfolioTests(unittest.TestCase):
                 self.assertIn(link["url"], source)
         self.assertNotIn("Evolución descrita por IA", source)
 
+    def test_recent_verified_events_are_optional_and_not_ia_claims(self):
+        import json
+        from src.portfolio_data import recent_activity
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)/"summaries.json"
+            project = self.data["projects"][0]
+            sha = "a"*40
+            p.write_text(json.dumps({"repos": [{
+                "name": project["repo"], "trivial": False,
+                "titular": "IA: ejecución desplegada y perfecta",
+                "verified_sources": [
+                    {"kind":"commit", "id":sha[:10], "title":"docs: update",
+                     "url":project["repo_url"]+"/commit/"+sha, "date":"2026-10-29"},
+                    {"kind":"commit", "id":"bad", "title":"fake",
+                     "url":"https://attacker.example/commit/"+sha, "date":"2026-10-29"}]}]}))
+            activity=recent_activity(self.data["projects"], p)
+            self.assertEqual(len(activity),1)
+            self.assertEqual(len(activity[0]["events"]),1)
+            pages=build_slides(self.data,activity)
+            self.assertEqual(len(pages), 10)
+            md=render_markdown(pages)
+            self.assertIn("/commit/"+sha,md)
+            self.assertNotIn("ejecución desplegada y perfecta",md)
+            self.assertNotIn("attacker.example",md)
+
     def test_disallow_html_in_editorial_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
             bad = yaml.safe_load(yaml.safe_dump(self.data))

@@ -80,3 +80,8 @@ section[class*="pf-"] a:hover { text-decoration: underline; }
 .pf-evidence b { position: absolute; top: 19px; right: 19px; font-size: 20px; color: var(--pf-cyan); }
 .pf-next-item { color: var(--pf-text) !important; font-size: 19px !important; margin: 17px 0 !important; }
 .pf-close .pf-project-summary a { display: inline-block; margin-top: 16px; font-size: 17px; }
+
+.pf-recent-card { background: var(--pf-surface); border: 1px solid var(--pf-rule); border-radius: 16px; padding: 20px; min-height: 290px; }
+.pf-recent-row { display: flex; flex-direction: column; border-top: 1px solid var(--pf-rule); padding: 13px 0; color: var(--pf-text) !important; }
+.pf-recent-id { color: var(--pf-cyan); font-size: 12px; font-family: 'DejaVu Sans Mono', monospace; }
+.pf-recent-title { font-size: 16px; line-height: 1.3; color: var(--pf-text); margin-top: 4px; }

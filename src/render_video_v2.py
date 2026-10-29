@@ -14,12 +14,12 @@ import subprocess
 from pathlib import Path
 
 try:
-    from src.portfolio_data import ROOT, load_portfolio
+    from src.portfolio_data import ROOT, load_portfolio, recent_activity
     from src.render_portfolio_v2 import (
         MANIFEST_PATH, MD_PATH, THEME, build_slides, render_markdown, write_preview
     )
 except ModuleNotFoundError:
-    from portfolio_data import ROOT, load_portfolio
+    from portfolio_data import ROOT, load_portfolio, recent_activity
     from render_portfolio_v2 import (
         MANIFEST_PATH, MD_PATH, THEME, build_slides, render_markdown, write_preview
     )
@@ -135,7 +135,8 @@ def render(*, image_dir: Path | None = None, smoke: bool = False,
         raise RuntimeError("ffmpeg y ffprobe son obligatorios")
     if not smoke and not shutil.which("edge-tts"):
         raise RuntimeError("edge-tts no disponible")
-    slides = build_slides(load_portfolio())
+    data = load_portfolio()
+    slides = build_slides(data, recent_activity(data['projects']))
     expected_md = render_markdown(slides)
     if not MD_PATH.exists() or MD_PATH.read_text(encoding="utf-8") != expected_md:
         raise ValueError("portfolio-v2.md no coincide con las fichas de proyecto; regenerar")
