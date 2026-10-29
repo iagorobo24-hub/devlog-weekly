@@ -26,12 +26,13 @@ def fake():
     r.full_name = NAME
     r.default_branch = "main"
     r.get_branch.return_value.commit.sha = SHA
-    r.get_branches.return_value = [branch("main", 50), branch("feature/a", 51),
-                                   branch("feature/b", 52)]
+    r.get_branches.return_value = [branch("main", 50), branch("feature/a", 2),
+                                   branch("feature/b", 3)]
     def comparison(base, head):
-        data = {"feature/a": [cm(1, 1, "feat: capability"),
+        assert base == SHA  # Compare pinned immutable SHA, not floating "main".
+        data = {f"{2:040x}": [cm(1, 1, "feat: capability"),
                               cm(2, 2, "test: regression")],
-                "feature/b": [cm(1, 1, "feat: capability"),
+                f"{3:040x}": [cm(1, 1, "feat: capability"),
                               cm(3, 3, "docs: instructions")]}
         return NS(ahead_by=len(data[head]), commits=data[head])
     r.compare.side_effect = comparison
@@ -58,7 +59,14 @@ class BranchActivityTests(unittest.TestCase):
         self.assertTrue(row["scan_complete"])
         self.assertEqual(row["observed_ahead_sum_not_unique"], 4)
         self.assertTrue(row["not_merged_or_runtime_verified"])
-        repo.compare.assert_any_call("main", "feature/a")
+        samples=row["sample_recent_substantive_commits"]
+        self.assertEqual(len(samples), 2)
+        self.assertEqual({x["kind"] for x in samples}, {"code", "test"})
+        self.assertTrue(all(x["url"] == f"https://github.com/{NAME}/commit/{x['sha']}"
+                            and x["commit_subject_only"] and x["not_merged_or_functionally_verified"]
+                            for x in samples))
+        repo.compare.assert_any_call(SHA, f"{2:040x}")
+        self.assertTrue(row["compared_immutable_head_shas"])
 
     def test_privacy_check_before_inspecting_branches(self):
         gh, repo = fake()
@@ -117,6 +125,35 @@ class BranchActivityTests(unittest.TestCase):
             cm(5, -1, "feat: future")])
         row = probe(gh, NAME, now=NOW, recent_days=7, lookback_days=30)
         self.assertEqual(row["counts_unique_ahead_of_default"]["code_30d"], 0)
+
+    def test_branch_tip_disagreement_does_not_add_fabricated_activity(self):
+        gh, r = fake()
+        r.compare.side_effect = None
+        r.compare.return_value = NS(ahead_by=2, commits=[
+            cm(1, 1, "feat: capability"), cm(99, 1, "feat: unrelated tip")])
+        row = probe(gh, NAME, now=NOW, recent_days=7, lookback_days=30)
+        self.assertEqual(row["counts_unique_ahead_of_default"]["code_7d"], 0)
+        self.assertFalse(row["scan_complete"])
+        self.assertEqual(row["comparison_errors"], 2)
+        self.assertTrue(row["compared_immutable_head_shas"])
+
+    def test_invalid_tip_never_enters_compare(self):
+        gh, repo = fake()
+        repo.get_branches.return_value[1].commit.sha = "not-a-sha"
+        row = probe(gh, NAME, now=NOW, recent_days=7, lookback_days=30)
+        self.assertFalse(row["scan_complete"])
+        self.assertEqual(row["comparison_errors"], 1)
+        repo.compare.assert_called_once_with(SHA, f"{3:040x}")
+
+    def test_unsafe_limits_rejected_before_remote_reads(self):
+        gh, repo = fake()
+        with self.assertRaisesRegex(ValueError, "Unsafe"):
+            probe(gh, NAME, now=NOW, recent_days=7,
+                  lookback_days=30, branch_limit=0)
+        with self.assertRaisesRegex(ValueError, "Unsafe"):
+            probe(gh, NAME, now=NOW, recent_days=7,
+                  lookback_days=30, commit_limit=99999)
+        gh.get_repo.assert_not_called()
 
     def test_public_report_keeps_provenance_and_no_publication(self):
         gh, r = fake()

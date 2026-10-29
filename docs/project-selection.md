@@ -283,3 +283,27 @@ La existencia de un archivo sólo prueba procedencia documental, no
 que la afirmación sea cierta o esté funcionando. Se preservan las tres
 puertas pendientes: prueba funcional independiente, evidencias visuales
 autorizadas y aprobación del propietario.
+
+## Evidencia de commits de ramas públicas (29-10-2026)
+
+La auditoría de ramas ahora compara referencias inmutables de dos SHA:
+la revisión observada de la rama predeterminada y la punta de cada rama
+pública. No usa nombres flotantes para calcular el diff. Una comparación
+completa cuya punta no coincida con el SHA observado se descarta y marca
+la cobertura como incompleta; los fallos no cuentan como actividad ausente.
+Los límites de ramas y commits son estrictos.
+
+Además de recuentos deduplicados, se conservan hasta cinco muestras
+recientes de commits clasificados como código o test, con permalink al SHA
+público. Son asuntos declarados en commits, no verificaciones de que
+el código funciona ni tests realmente pasados. Los enlaces se validan
+contra el mismo repositorio antes de incorporarse al informe estratégico
+y a la vista previa. Las muestras malformadas, extranjeras o privadas
+provocan rechazo; el frontend HTML escapa asuntos de commit.
+
+La propuesta editorial incorpora esos SHA como referencias de revisión.
+El deck separado puede añadir una diapositiva de evidencia de ramas, con
+sello BORRADOR INTERNO / NO PUBLICAR; nunca sustituye las fichas
+aprobadas, la CI de la rama predeterminada ni el PDF de producción.
+Un informe antiguo o con cobertura parcial no constituye prueba de
+ausencia de trabajo. La línea base PSM sigue sin recertificarse.

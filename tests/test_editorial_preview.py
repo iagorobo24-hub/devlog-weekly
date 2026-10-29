@@ -19,6 +19,26 @@ class EditorialPreviewTests(unittest.TestCase):
         self.assertIn("prioridades editoriales", md)
         self.assertIn("sin definir" if False else "5/5", md)
 
+    def test_references_unmerged_commits_only_as_subjects(self):
+        sha="a"*40
+        self.s["proposed_slate"][0].update({
+            "unmerged_code_7d": 1, "unmerged_tests_7d": 0,
+            "branch_scan_complete": True,
+            "branch_commit_samples": [{
+                "sha": sha, "kind": "code",
+                "subject": "<script>alert(1)</script>",
+                "url": f"https://github.com/owner/foo/commit/{sha}",
+                "commit_subject_only": True,
+                "not_merged_or_functionally_verified": True,
+            }],
+        })
+        result=render(self.s,self.d)
+        self.assertIn("Muestras de commits públicos", result)
+        self.assertIn("sin verificar ejecución", result)
+        self.assertIn(sha, result)
+        self.assertNotIn("<script>", result)
+        self.assertIn("&lt;script&gt;", result)
+
     def test_rejects_private_injections(self):
         self.s["proposed_slate"][0]["visibility"]="private"
         with self.assertRaisesRegex(ValueError,"privado"):

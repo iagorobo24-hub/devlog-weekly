@@ -14,6 +14,7 @@ import subprocess
 
 from src.candidate_profiles import REPORT as PROFILE_REPORT
 from src.portfolio_data import ROOT, load_portfolio
+from src.project_selection_core import SHA_RE
 from src.portfolio_release_review import OUTPUT as RELEASE_REPORT, _pinned_sources
 from src.render_portfolio_v2 import THEME, build_slides, esc, page, render_markdown
 
@@ -51,6 +52,19 @@ def _verified_inputs(report: dict, profiles: dict) -> tuple[list, dict]:
                 or not isinstance(candidate.get("blockers"), list)
                 or not candidate["blockers"]):
             raise ValueError("Candidato incorrecto o promovido")
+        sample_links = candidate.get("unmerged_commit_samples", [])
+        if not isinstance(sample_links, list) or len(sample_links) > 5:
+            raise ValueError("Muestra de commits de ramas sin límites")
+        for sample in sample_links:
+            sha = sample.get("sha") if isinstance(sample, dict) else None
+            if (not isinstance(sha, str) or not SHA_RE.fullmatch(sha)
+                    or sample.get("kind") not in ("code", "test")
+                    or sample.get("url") !=
+                    f"https://github.com/{candidate['repo']}/commit/{sha}"
+                    or sample.get("commit_subject_only") is not True
+                    or sample.get("not_merged_or_functionally_verified") is not True
+                    or not isinstance(sample.get("subject"), str)):
+                raise ValueError("Muestra de commits ajena o no versionada")
         seen.add(candidate["repo"])
     return candidates, available
 
@@ -138,6 +152,29 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
             "review-candidate", markup,
             "Ficha preliminar de " + d["title"] +
             ". No está aprobada para publicación. Deben verificarse pruebas funcionales.",
+            c["repo"]))
+    for c in candidates:
+        examples = c.get("unmerged_commit_samples", [])
+        if not examples:
+            continue
+        evidence_links = "".join(
+            '<a class="pf-evidence" href="' + esc(sample["url"]) + '">'
+            '<strong>ASUNTO DECLARADO: ' + ('CÓDIGO' if sample["kind"] == "code" else 'TEST') + '</strong>'
+            '<span>' + esc(sample["subject"][:145]) + '</span>'
+            '<b>SHA ' + esc(sample["sha"][:10]) + ' ↗</b></a>'
+            for sample in examples[:3]
+        )
+        slides.insert(-1, page(
+            "review-branch-evidence",
+            '<div class="pf-meta">ACTIVIDAD NO INTEGRADA / EVIDENCIA DE COMMITS</div>'
+            '<h2>' + esc(c.get("title") or c["repo"]) + '</h2>'
+            '<p class="pf-lead">Muestra de commits públicos pendientes de integración: '
+            'sus asuntos no acreditan pruebas exitosas ni funciones operativas.</p>'
+            '<div class="pf-evidence-list">' + evidence_links + '</div>'
+            '<p class="pf-bottom-note">SHA inmutables y recuentos separados de la CI de main. '
+            'Sin aprobación editorial ni prueba funcional independiente.</p>',
+            "Muestra de asuntos de commits en ramas públicas; no equivale "
+            "a trabajo integrado ni funcionalidades verificadas.",
             c["repo"]))
     return [
         {**slide, "markup": slide["markup"] + WARNING_MARK}

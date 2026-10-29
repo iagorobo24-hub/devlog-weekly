@@ -58,6 +58,9 @@ def probe(gh, name: str, *, now: datetime, recent_days: int,
           commit_limit: int = MAX_AHEAD_COMMITS) -> dict:
     if now.tzinfo is None:
         raise ValueError("Date must have a timezone")
+    if (type(branch_limit) is not int or not 1 <= branch_limit <= MAX_BRANCHES
+            or type(commit_limit) is not int or not 1 <= commit_limit <= MAX_AHEAD_COMMITS):
+        raise ValueError("Unsafe branch or commit audit limit")
     repo = gh.get_repo(name)
     # The privacy check precedes branch enumeration or commit inspection.
     if repo.private is not False or repo.full_name != name:
@@ -78,8 +81,14 @@ def probe(gh, name: str, *, now: datetime, recent_days: int,
         if item.name == branch:
             continue
         checked += 1
+        tip = getattr(getattr(item, "commit", None), "sha", None)
+        if not isinstance(tip, str) or not SHA_RE.fullmatch(tip):
+            incomplete = True
+            errors += 1
+            continue
         try:
-            comparison = repo.compare(branch, item.name)
+            # Freeze both sides of the comparison. Names may change during the scan.
+            comparison = repo.compare(default_head, tip)
             ahead = comparison.ahead_by
             if not isinstance(ahead, int) or ahead < 0:
                 raise ValueError("Invalid comparison ahead_by")
@@ -89,6 +98,13 @@ def probe(gh, name: str, *, now: datetime, recent_days: int,
             sampled = list(islice(comparison.commits, commit_limit + 1))
             if len(sampled) > commit_limit or ahead > len(sampled):
                 incomplete = True
+            # A completely fetched comparison must end at the pinned branch tip.
+            # If not, discard the branch instead of attributing mismatched commits.
+            if ahead <= commit_limit and sampled and (
+                    len(sampled) != ahead or sampled[-1].sha.lower() != tip.lower()):
+                incomplete = True
+                errors += 1
+                continue
             for c in sampled[:commit_limit]:
                 sha = c.sha
                 if not isinstance(sha, str) or not SHA_RE.fullmatch(sha) or sha in seen:
@@ -101,11 +117,9 @@ def probe(gh, name: str, *, now: datetime, recent_days: int,
                     continue
                 commits.append({"sha": sha.lower(), "date": date,
                                 "message": c.commit.message.splitlines()[0][:300]})
-            head = getattr(getattr(item, "commit", None), "sha", None)
-            if (isinstance(head, str) and SHA_RE.fullmatch(head)
-                    and isinstance(item.name, str) and 1 <= len(item.name) <= 200):
+            if isinstance(item.name, str) and 1 <= len(item.name) <= 200:
                 branch_evidence.append({
-                    "branch": item.name, "tip": head.lower(), "ahead_by": ahead,
+                    "branch": item.name, "tip": tip.lower(), "ahead_by": ahead,
                     "ahead_is_not_unique_across_branches": True,
                 })
         except GithubException as exc:
@@ -134,16 +148,34 @@ def probe(gh, name: str, *, now: datetime, recent_days: int,
             counts["docs_30d"] += 1
         else:
             counts["other_30d"] += 1
+    # Small, deterministic evidence sample for manual inspection. These are
+    # commit-subject classifications, NOT statements of implemented behavior.
+    recent_examples = []
+    for item in sorted(commits, key=lambda row: (row["date"], row["sha"]), reverse=True):
+        kind = categorize(item["message"])
+        if kind not in ("code", "test") or commit_date(item["date"]) < recent:
+            continue
+        recent_examples.append({
+            "sha": item["sha"], "date": item["date"], "kind": kind,
+            "subject": item["message"],
+            "url": f"https://github.com/{name}/commit/{item['sha']}",
+            "commit_subject_only": True,
+            "not_merged_or_functionally_verified": True,
+        })
+        if len(recent_examples) == 5:
+            break
     branches_sorted = sorted(branch_evidence, key=lambda v: (-v["ahead_by"], v["branch"]))
     return {
         "repo": name, "visibility": "public", "default_branch": branch,
         "default_head_at_scan": default_head.lower(),
         "branch_scanned": checked, "comparison_errors": errors,
         "scan_complete": not incomplete,
+        "compared_immutable_head_shas": True,
         "counts_unique_ahead_of_default": counts,
         "observed_unique_sha_count_in_window": len(commits),
         "observed_ahead_sum_not_unique": observed_ahead,
         "sample_branches": branches_sorted[:5],
+        "sample_recent_substantive_commits": recent_examples,
         "commit_count_is_lower_bound_if_scan_incomplete": True,
         "separate_from_default_head_ci": True,
         "not_merged_or_runtime_verified": True,
@@ -175,6 +207,7 @@ def build(selection: dict, gh, *, now: datetime,
             probes.append({
                 "repo": name, "visibility": "public",
                 "status": "unavailable", "scan_complete": False,
+                "compared_immutable_head_shas": False,
                 "separate_from_default_head_ci": True,
                 "not_merged_or_runtime_verified": True,
                 "counts_unique_ahead_of_default": None,

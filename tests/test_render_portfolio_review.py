@@ -58,6 +58,39 @@ class ComparisonSlidesTests(unittest.TestCase):
         self.assertEqual(len([x for x in once if x["kind"] == "project"]), 2)
         self.assertTrue(all("NO PUBLICAR" in x["markup"] for x in once))
 
+    def test_branch_sample_gets_extra_page_not_promoted(self):
+        self.report["candidates"][0]["unmerged_commit_samples"] = [{
+            "sha": SHA, "kind": "code", "subject": "feat: add parser",
+            "url": f"https://github.com/{REPO}/commit/{SHA}",
+            "commit_subject_only": True,
+            "not_merged_or_functionally_verified": True,
+        }]
+        slides = self.build()
+        self.assertEqual(len(slides), 16)
+        proof = [s for s in slides if s["kind"] == "review-branch-evidence"]
+        self.assertEqual(len(proof), 1)
+        self.assertIn("feat: add parser", proof[0]["markup"])
+        self.assertIn("NO PUBLICAR", proof[0]["markup"])
+        self.assertEqual(len([s for s in slides if s["kind"]=="project"]), 2)
+        self.assertFalse(self.report["candidates"][0]["approved_for_release"])
+
+    def test_branch_commit_xss_escaped_and_foreign_link_rejected(self):
+        entry = {
+            "sha": SHA, "kind": "test",
+            "subject": "<script>alert(1)</script>",
+            "url": f"https://github.com/{REPO}/commit/{SHA}",
+            "commit_subject_only": True,
+            "not_merged_or_functionally_verified": True,
+        }
+        self.report["candidates"][0]["unmerged_commit_samples"] = [entry]
+        html = next(s for s in self.build()
+                    if s["kind"] == "review-branch-evidence")["markup"]
+        self.assertNotIn("<script>", html)
+        self.assertIn("&lt;script&gt;", html)
+        entry["url"] = "https://attacker.test/commit/" + SHA
+        with self.assertRaisesRegex(ValueError, "ajena"):
+            self.build()
+
     def test_ci_link_separates_execution_from_workflow_file(self):
         url = f"https://github.com/{REPO}/actions/runs/98765"
         self.report["candidates"][0]["ci_run_url_at_head"] = url

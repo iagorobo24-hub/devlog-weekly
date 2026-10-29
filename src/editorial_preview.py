@@ -78,6 +78,25 @@ def render(strategy: dict, drafts: dict) -> str:
                 str(row["unmerged_tests_7d"]),
                 "completa" if row.get("branch_scan_complete") else "parcial",
             )) + " |")
+        content += [
+            "", "### Muestras de commits públicos, no evidencia de ejecución", "",
+            "Son asuntos declarados en GitHub, no funcionalidades aceptadas.",
+            "Cada enlace señala el SHA concreto, sin asumir integración en main.",
+        ]
+        for row in feature_items + branch_only:
+            samples = row.get("branch_commit_samples", [])
+            if not samples:
+                continue
+            content.extend(["", f"**{clean(row['title'])}**"])
+            for item in samples[:3]:
+                label = "código" if item["kind"] == "code" else "prueba declarada"
+                # Use text not interpreted as HTML markup from GitHub commit subjects.
+                from html import escape
+                subject = escape(clean(item["subject"]), quote=True)
+                content.append(
+                    f"- {label}: {subject} "
+                    f"([SHA {item['sha'][:12]}]({item['url']})) — **sin verificar ejecución**"
+                )
     historical = strategy.get("historical_watchlist", [])
     if historical:
         content += ["", "## Proyectos históricos que requieren evidencia nueva", "",

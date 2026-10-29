@@ -14,10 +14,10 @@ import yaml
 
 try:
     from src.select_projects import ROOT
-    from src.project_selection_core import configured_projects, NAME_RE
+    from src.project_selection_core import configured_projects, NAME_RE, SHA_RE
 except ModuleNotFoundError:
     from select_projects import ROOT
-    from project_selection_core import configured_projects, NAME_RE
+    from project_selection_core import configured_projects, NAME_RE, SHA_RE
 
 CONFIG = ROOT / "config/project-selection.yml"
 SELECTION = ROOT / "out/project-selection-public.json"
@@ -78,6 +78,23 @@ def branch_map_for_selection(selection: dict, report: dict | None) -> dict:
         name = row.get("repo")
         if not isinstance(name, str) or not NAME_RE.fullmatch(name) or name in found:
             raise ValueError("Rama pública duplicada o repo inválido")
+        samples = row.get("sample_recent_substantive_commits", [])
+        if not isinstance(samples, list) or len(samples) > 5:
+            raise ValueError("Muestra de commits de ramas sin límite seguro")
+        seen_samples = set()
+        for item in samples:
+            if (not isinstance(item, dict)
+                    or item.get("kind") not in ("code", "test")
+                    or not isinstance(item.get("sha"), str)
+                    or not SHA_RE.fullmatch(item["sha"])
+                    or item["sha"] in seen_samples
+                    or item.get("url") != f"https://github.com/{name}/commit/{item['sha']}"
+                    or item.get("commit_subject_only") is not True
+                    or item.get("not_merged_or_functionally_verified") is not True
+                    or not isinstance(item.get("subject"), str)
+                    or not 1 <= len(item["subject"]) <= 300):
+                raise ValueError("Muestra de ramas ajena o inválida")
+            seen_samples.add(item["sha"])
         counts = row.get("counts_unique_ahead_of_default")
         if counts is not None:
             for key in ("code_7d", "tests_7d", "code_30d", "tests_30d"):
@@ -95,24 +112,28 @@ def branch_signal(row: dict | None, quality: dict | None) -> dict:
     if not row:
         return {"unmerged_code_7d": 0, "unmerged_tests_7d": 0,
                 "unmerged_30d": 0, "branch_scan_complete": False,
-                "branch_evidence_status": "not_checked"}
+                "branch_evidence_status": "not_checked",
+                "branch_commit_samples": []}
     head = quality.get("head") if quality else None
     stored_head = row.get("default_head_at_scan")
     if head is not None and head != stored_head:
         return {"unmerged_code_7d": 0, "unmerged_tests_7d": 0,
                 "unmerged_30d": 0, "branch_scan_complete": False,
-                "branch_evidence_status": "default_head_changed"}
+                "branch_evidence_status": "default_head_changed",
+                "branch_commit_samples": []}
     counts = row.get("counts_unique_ahead_of_default")
     if not isinstance(counts, dict):
         return {"unmerged_code_7d": 0, "unmerged_tests_7d": 0,
                 "unmerged_30d": 0, "branch_scan_complete": False,
-                "branch_evidence_status": "probe_unavailable"}
+                "branch_evidence_status": "probe_unavailable",
+                "branch_commit_samples": []}
     return {
         "unmerged_code_7d": counts["code_7d"],
         "unmerged_tests_7d": counts["tests_7d"],
         "unmerged_30d": counts["code_30d"] + counts["tests_30d"],
         "branch_scan_complete": row.get("scan_complete") is True,
         "branch_evidence_status": "unmerged_not_validated_on_main",
+        "branch_commit_samples": row.get("sample_recent_substantive_commits", []),
     }
 
 
