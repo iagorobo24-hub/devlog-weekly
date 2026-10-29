@@ -55,3 +55,16 @@ La ejecución GitHub Actions [#14](https://github.com/iagorobo24-hub/devlog-week
 Cambios operativos observados: `src/collect.py` falla al no acceder a cualquier repo y bloquea repositorios privados; `src/synthesize.py` no permite que una síntesis parcial avance a publicación; el workflow usa `GITHUB_TOKEN` para los cuatro repos públicos y requiere tests antes del pipeline; `src/publish.py` admite credenciales opcionales de cliente OAuth propio vía entorno.
 
 **Validación PSM:** esta evidencia comprueba el flujo principal, no certifica todas las invariantes ni la deriva histórica contra `97a4319`. Sigue pendiente reconciliar el baseline existente, validar gestión de rate limits y completar la migración OAuth de Drive. No se modifica `manifest.yaml` ni el commit de fuente auditada.
+
+### Separación de CI, cron y generación histórica (29-10-2026)
+
+Se incorpora `src/backfill.py` como nueva entrada de consulta pública
+(sin escritura sobre `state/` o Drive), `ci.yml` para pruebas aisladas
+en push/PR y `backfill.yml` para obtener archivos descargables.
+El flujo semanal mantiene cron/disparo manual y serialización mediante
+concurrency, con el único permiso de escritura reservado al job de
+persistencia. La cronología histórica no depende de narrativas actuales.
+
+**PSM:** registro de cambio material para revisión posterior.
+No se actualiza `manifest.yaml` ni se afirma certificar la línea base
+antigua hasta ejecutar reconciliación y validación suficiente.

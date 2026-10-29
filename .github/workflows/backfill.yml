@@ -1,0 +1,48 @@
+name: devlog histórico verificable
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Inicio ISO UTC inclusivo'
+        required: true
+        default: '2026-08-31T14:38:32.972001+00:00'
+      until:
+        description: 'Fin ISO UTC exclusivo'
+        required: true
+        default: '2026-10-26T00:00:00+00:00'
+  push:
+    branches: [main]
+    paths:
+      - 'src/backfill.py'
+      - 'tests/test_backfill.py'
+      - '.github/workflows/backfill.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+      - run: uv sync
+      - name: Pruebas
+        run: uv run python -m unittest discover -s tests -v
+      - run: npm install -g @marp-team/marp-cli
+      - name: Reconstruir archivos históricos
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BACKFILL_SINCE: ${{ inputs.since || '2026-08-31T14:38:32.972001+00:00' }}
+          BACKFILL_UNTIL: ${{ inputs.until || '2026-10-26T00:00:00+00:00' }}
+        run: |
+          uv run python src/backfill.py --since "$BACKFILL_SINCE" --until "$BACKFILL_UNTIL" --pdf
+      - name: Entregar archivo sin publicar en Drive
+        uses: actions/upload-artifact@v4
+        with:
+          name: devlog-historico-publico-2026-W36-W43
+          path: out/backfill/*
+          if-no-files-found: error
+          retention-days: 90

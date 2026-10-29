@@ -57,16 +57,15 @@ perder la ventana ni duplicar narrativa.
 
 | Pieza | Estado | Nota |
 |---|:---:|---|
-| Recolección desde la API de GitHub | 🟡 | Implementada; el repositorio no incluye tests. |
+| Recolección desde la API de GitHub | ✅ | Verificado 4/4 repos en W44; fallos de autorización y privacidad bloqueantes. |
 | Síntesis con LLM (cadena de modelos de NVIDIA NIM) | 🟡 | Implementada. Solo se comprueba que la respuesta traiga las cuatro claves esperadas; no se valida el contenido. |
-| Deck semanal (Marp → PDF) | 🟡 | Implementado; sin tests. |
-| Deck maestro y vídeo narrado | 🟡 | Implementados, con umbral de actividad; sin tests. |
+| Deck semanal (Marp → PDF) | ✅ | Generado y publicado en la ejecución W44. |
+| Deck maestro y vídeo narrado | ✅ | PDF y MP4 publicados en W44; faltan tests específicos. |
 | Publicación en Drive con rclone | 🟡 | Implementada; depende de un `rclone.conf` con OAuth propio. |
 | Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. La generación histórica de semanas individuales no está reconstruida. |
 | Tests automáticos | ✅ | 5 tests de regresión ejecutados con éxito en GitHub Actions el 29-10-2026. Cobertura todavía parcial. |
 
-✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. Ninguna pieza está marcada como probada
-porque el repositorio no aporta pruebas automáticas.
+✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. El flujo W44 y los tests están verificados; la cobertura sigue siendo parcial.
 
 ## Inicio rápido
 
@@ -135,7 +134,7 @@ Los secretos van en variables de entorno o en los secretos de Actions, nunca en 
   vídeo se envía al servicio de edge-tts (Microsoft) y el tema Marp carga fuentes de Google Fonts. El resultado se sube a
   tu Drive.
 - **El modelo ve títulos, no diffs.** Recibe los títulos de commits y las cifras agregadas, no el código.
-- **Un fallo de síntesis en un repo lo omite** del resumen; el resto sigue.
+- **Síntesis incompleta bloqueante.** El proceso falla sin publicar ni actualizar estado cuando falte cualquier resumen.
 - **Dependencia de servicios externos.** Los modelos listados pueden no estar habilitados para tu cuenta de NIM; si
   uno falla, se prueba el siguiente de la cadena.
 - **El estado se guarda al final.** Si falla un paso después de confirmar el estado (deck maestro, vídeo, publicación
@@ -183,7 +182,36 @@ docs/               gráficos del README y mapa del sistema (PSM)
 - **Fallos visibles:** errores de acceso a cualquier repo y síntesis incompleta terminan el job con error, sin publicar ni avanzar `state/`. El job `tests` es requisito del pipeline.
 - **NVIDIA NIM:** la cadena antigua expiró en agosto de 2026. El 29-10-2026 se comprobó que `openai/gpt-oss-20b` funciona con esta cuenta y se situó como primer modelo. Las alternativas todavía requieren validación. Puede configurarse `NIM_MODEL` en el entorno de ejecución para fijar un modelo probado.
 - **Drive:** `RCLONE_CONF` sigue siendo necesario. Se admiten los secretos opcionales `RCLONE_DRIVE_CLIENT_ID` y `RCLONE_DRIVE_CLIENT_SECRET` para usar OAuth propio, sin publicar los valores. Hasta configurarlos, la publicación dependerá del cliente compartido que rclone retirará en 2026.
-- **Reprocesamiento:** el último cursor efectivo sigue en 2026-08-31. El primer run válido hará *catch-up* de la actividad de los repos públicos desde esa fecha, agrupada en un único informe; **no** restituye automáticamente un PDF independiente por semana. No reiniciar ni modificar manualmente el estado sin cotejar los históricos.
+- **Reprocesamiento:** el cursor se actualizó en `e2b0ae8` (29-10-2026). El informe W44 agrega lo pendiente desde agosto. El archivo W36 (parcial) a W43 se genera en un workflow independiente con metadatos fechados, sin modificar `state/` ni Drive.
 - **Pruebas:** `uv run python -m unittest discover -s tests -v`.
 
 La ejecución de GitHub Actions programada para los lunes sigue habilitada. La primera incorporación de esta reparación dispara también una ejecución por `push`, condicionada a superar los tests. Comprueba el resultado en Actions antes de dar por operativo el sistema.
+
+## Histórico verificable (sin reescritura)
+
+La reconstrucción W36 parcial–W43 utiliza **fechas reales** de commits,
+issues y PRs cerradas de los cuatro repositorios públicos configurados.
+No reinterpreta títulos con IA ni asigna etiquetas a una fecha histórica
+sin evidencia. W36 empieza el 31-08-2026 a las 14:38:32 UTC, tras el
+último run válido; el límite superior es exclusivo: 26-10-2026 00:00 UTC.
+
+El módulo `src/backfill.py` crea informes Markdown y PDF (con Marp)
+en `out/backfill/` y un `manifest.json` con los conteos reales.
+No cambia `state/`, no toca los informes actuales de Drive y no utiliza
+credenciales NVIDIA ni Google. El workflow `devlog histórico verificable`
+los deja como artefactos de Actions descargables, con retención de 90 días.
+Los informes históricos se deben revisar antes de distribuirlos.
+
+El cron semanal y el disparo manual son los únicos que ejecutan
+publicación de producción. Los cambios en archivos de código ejecutan
+únicamente `devlog CI`, que no lleva secretos de servicios externos.
+Las ejecuciones semanales están serializadas para no pisar el estado.
+
+### Pendiente externo: OAuth propio de Google Drive
+
+El servicio de Drive funcionó en la prueba W44, pero rclone emitió un
+aviso sobre la retirada del `client_id` compartido. El código acepta
+`RCLONE_DRIVE_CLIENT_ID` y `RCLONE_DRIVE_CLIENT_SECRET` como secretos
+de Actions, sin exponer sus valores. Para activar la migración se necesita
+crear/autorizar ese cliente en la cuenta Google; el conector de GitHub
+no proporciona las credenciales ni permite escribir secretos de Actions.
