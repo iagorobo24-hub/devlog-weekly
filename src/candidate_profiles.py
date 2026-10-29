@@ -1,7 +1,8 @@
 """Reviewable drafts of PUBLIC project profiles. Never render automatically.
 
 The draft revision must match the quality probe's default-branch HEAD. Every
-claim links to a pinned revision; CI statements require an exact HEAD success.
+claim links to a pinned source path. CI statements need a separate run URL
+bound to that HEAD; a workflow configuration file is NOT execution evidence.
 """
 from __future__ import annotations
 
@@ -40,6 +41,25 @@ def validate(profile: dict, quality: dict | None) -> dict:
         raise ValueError("identidad editorial inválida")
     if not isinstance(profile.get("statements"), list) or not profile["statements"]:
         raise ValueError("candidato sin afirmaciones")
+    # A green label alone is not a verifiable CI reference. The quality
+    # probe must expose a run at this exact public repository/HEAD.
+    quality_matches = (
+        isinstance(quality, dict) and quality.get("visibility") == "public"
+        and quality.get("repo") == repo and quality.get("head") == revision
+    )
+    ci = quality.get("ci") if quality_matches else None
+    ci = ci if isinstance(ci, dict) else {}
+    run_url = ci.get("run_url")
+    run_prefix = f"https://github.com/{repo}/actions/runs/"
+    supported_ci = (
+        ci.get("status") == "success_at_head"
+        and type(ci.get("run_count_at_head")) is int
+        and ci["run_count_at_head"] > 0
+        and isinstance(run_url, str) and run_url.startswith(run_prefix)
+        and run_url[len(run_prefix):].isdigit()
+        and int(run_url[len(run_prefix):]) > 0
+    )
+    verified_run_url = run_url if supported_ci else None
     citations = []
     for claim in profile["statements"]:
         if (not isinstance(claim, dict) or claim.get("kind") not in SUPPORTED_KINDS
@@ -50,13 +70,17 @@ def validate(profile: dict, quality: dict | None) -> dict:
         if (not isinstance(source, str) or not PATH_RE.fullmatch(source)
                 or any(part in (".", "..") for part in source.split("/"))):
             raise ValueError("fuente no versionada")
-        exact_ci = (quality is not None and quality.get("head") == revision
-                    and quality.get("ci", {}).get("status") == "success_at_head")
         action = "tree" if claim["kind"] == "repository_directory" else "blob"
+        is_ci_statement = claim["kind"] == "ci_at_head"
         citations.append({
             "statement": claim["text"], "evidence_kind": claim["kind"],
             "url": f"https://github.com/{repo}/{action}/{revision}/{quote(source, safe='/')}",
-            "is_independently_verified": bool(exact_ci and claim["kind"] == "ci_at_head"),
+            # Pinned file URLs are structural references. Their mere existence
+            # does not independently verify what a statement asserts.
+            "is_independently_verified": False,
+            "source_semantics_not_verified": True,
+            "ci_run_url_at_head": verified_run_url if is_ci_statement else None,
+            "ci_run_url_is_not_runtime_evidence": True,
         })
     for image in profile.get("images", []):
         if (not isinstance(image, dict) or image.get("kind") != "conceptual_illustration"
@@ -80,9 +104,9 @@ def validate(profile: dict, quality: dict | None) -> dict:
         if quality.get("readiness") != "ci_head_passed_tests_exist":
             reasons.append("head_ci_or_test_evidence_incomplete")
     if any(claim["kind"] == "ci_at_head" for claim in profile["statements"]):
-        if (quality is None or quality.get("head") != revision
-                or quality.get("ci", {}).get("status") != "success_at_head"):
+        if not supported_ci:
             reasons.append("ci_statement_needs_recheck")
+            reasons.append("ci_run_url_missing_or_invalid_at_head")
     return {
         "id": profile["id"], "title": profile["title"], "repo": repo,
         "revision": revision, "draft_only": True, "visibility": "public",
