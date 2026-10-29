@@ -74,7 +74,7 @@ jobs:
       - run: uv sync
       - name: Recoger metadatos públicos para la prueba
         env:
-          GITHUB_${{ github.event_name == 'workflow_dispatch' && inputs.prueba_modelo == true }}: GH_${{ github.event_name == 'workflow_dispatch' && inputs.prueba_modelo == true }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: uv run python src/collect.py --since 2026-10-12T00:00:00+00:00
       - name: Síntesis con NIM sin actualizar narrativa ni publicar
         env:
