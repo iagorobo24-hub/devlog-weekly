@@ -24,6 +24,7 @@ SELECTION = ROOT / "out/project-selection-public.json"
 QUALITY = ROOT / "out/project-quality-public.json"
 DRAFTS = ROOT / "out/candidate-profiles-review.json"
 OUTPUT = ROOT / "out/project-strategy-public.json"
+BRANCHES = ROOT / "out/project-branch-activity-public.json"
 
 # Readiness for presentation is NOT a binary consequence of CI.
 def classify(*, strategic_priority: int | None, ci_status: str, has_test_path: bool,
@@ -56,7 +57,67 @@ def classify(*, strategic_priority: int | None, ci_status: str, has_test_path: b
     return "observe_not_publication_ready", reasons
 
 
-def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> dict:
+def branch_map_for_selection(selection: dict, report: dict | None) -> dict:
+    """Public unmerged activity evidence, distinct from default branch CI."""
+    if report is None:
+        return {}
+    if (not isinstance(report, dict) or report.get("schema") != 1
+            or report.get("visibility") != "public"
+            or report.get("source_selection_generated_at") != selection.get("generated_at")
+            or report.get("private_inputs_accessed") is not False
+            or report.get("automatic_publication") is not False
+            or report.get("feature_work_is_not_main_or_ci_evidence") is not True
+            or report.get("default_branch_counts_unchanged") is not True):
+        raise ValueError("Informe de ramas privado, inseguro o desincronizado")
+    found = {}
+    for row in report.get("repos", []):
+        if (not isinstance(row, dict) or row.get("visibility") != "public"
+                or row.get("separate_from_default_head_ci") is not True
+                or row.get("not_merged_or_runtime_verified") is not True):
+            raise ValueError("Información privada o inverificable de ramas")
+        name = row.get("repo")
+        if not isinstance(name, str) or not NAME_RE.fullmatch(name) or name in found:
+            raise ValueError("Rama pública duplicada o repo inválido")
+        counts = row.get("counts_unique_ahead_of_default")
+        if counts is not None:
+            for key in ("code_7d", "tests_7d", "code_30d", "tests_30d"):
+                if type(counts.get(key)) is not int or counts[key] < 0:
+                    raise ValueError("Recuentos de rama inválidos")
+        found[name] = row
+    expected = {name for group in ("ranked", "other_active", "watchlist")
+                for candidate in selection.get(group, []) for name in candidate["repos"]}
+    if set(found) != expected:
+        raise ValueError("Cobertura de actividad de ramas incompleta")
+    return found
+
+
+def branch_signal(row: dict | None, quality: dict | None) -> dict:
+    if not row:
+        return {"unmerged_code_7d": 0, "unmerged_tests_7d": 0,
+                "unmerged_30d": 0, "branch_scan_complete": False,
+                "branch_evidence_status": "not_checked"}
+    head = quality.get("head") if quality else None
+    stored_head = row.get("default_head_at_scan")
+    if head is not None and head != stored_head:
+        return {"unmerged_code_7d": 0, "unmerged_tests_7d": 0,
+                "unmerged_30d": 0, "branch_scan_complete": False,
+                "branch_evidence_status": "default_head_changed"}
+    counts = row.get("counts_unique_ahead_of_default")
+    if not isinstance(counts, dict):
+        return {"unmerged_code_7d": 0, "unmerged_tests_7d": 0,
+                "unmerged_30d": 0, "branch_scan_complete": False,
+                "branch_evidence_status": "probe_unavailable"}
+    return {
+        "unmerged_code_7d": counts["code_7d"],
+        "unmerged_tests_7d": counts["tests_7d"],
+        "unmerged_30d": counts["code_30d"] + counts["tests_30d"],
+        "branch_scan_complete": row.get("scan_complete") is True,
+        "branch_evidence_status": "unmerged_not_validated_on_main",
+    }
+
+
+def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
+                 *, branch_report: dict | None = None) -> dict:
     configured_projects(config)
     if any(obj.get("visibility") != "public" for obj in (selection, quality, drafts)):
         raise ValueError("Datos privados rechazados de selección pública")
@@ -85,6 +146,7 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
         draft_map[d["repo"]] = d
     priorities = {repo: p["priority"] for p in config.get("projects", [])
                   for repo in p["repos"]}
+    branch_rows = branch_map_for_selection(selection, branch_report)
     result = []
     seen_repos = set()
     for section, candidate in candidates:
@@ -113,7 +175,13 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
             )
             if draft and draft.get("warnings"):
                 reasons.append("Borrador con comprobaciones pendientes")
+            branch_evidence = branch_signal(branch_rows.get(repo), q)
+            if branch_evidence["unmerged_code_7d"] + branch_evidence["unmerged_tests_7d"]:
+                reasons.append("Actividad pública en ramas aún no integradas en la rama predeterminada")
+            if branch_rows and not branch_evidence["branch_scan_complete"]:
+                reasons.append("Auditoría de ramas incompleta; recuento como mínimo observado")
             result.append({
+                **branch_evidence,
                 "repo": repo, "title": candidate["title"],
                 "selection_bucket": section,
                 "visibility": "public", "strategic_priority": priority,
@@ -129,6 +197,7 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
     # Historical projects are visible for review, but never promoted just
     # because an old editorial profile or a declared priority exists.
     historical = []
+    branch_only_watchlist = []
     watch = selection.get("watchlist", [])
     if not isinstance(watch, list):
         raise ValueError("Lista de seguimiento inválida")
@@ -145,9 +214,18 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
                 raise ValueError("Repositorio duplicado en seguimiento")
             seen_repos.add(repo)
             priority = priorities.get(repo)
+            branch_evidence = branch_signal(branch_rows.get(repo), None)
+            if (candidate.get("spotlight") is not False and
+                    branch_evidence["unmerged_code_7d"] + branch_evidence["unmerged_tests_7d"] > 0):
+                branch_only_watchlist.append({
+                    **branch_evidence, "repo": repo, "title": candidate["title"],
+                    "visibility": "public", "default_branch_inactive": True,
+                    "not_ready_for_publication": True, "publishable": False,
+                })
             if priority is None or priority < 2 or candidate.get("spotlight") is False:
                 continue
             historical.append({
+                **branch_evidence,
                 "repo": repo, "title": candidate["title"],
                 "visibility": "public", "strategic_priority": priority,
                 "priority_basis": "proposed_public_config_not_owner_confirmed",
@@ -162,6 +240,7 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
                   "block_until_ci_diagnosis": 3}
     result.sort(key=lambda x: (tier_order[x["editorial_tier"]],
                                -(x["strategic_priority"] or 0),
+                               -(x["unmerged_code_7d"] + x["unmerged_tests_7d"]),
                                -x["evidence_score"], x["repo"]))
     return {
         "schema": 1, "visibility": "public",
@@ -171,8 +250,13 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
         "configured_priorities_are_not_owner_approval": True,
         "private_projects_excluded": True,
         "all_active_candidates_considered": True,
+        "branch_work_does_not_prove_main_or_ci": True,
+        "branch_activity_checked": branch_report is not None,
+        "branch_selection_generated_at": (
+            branch_report["source_selection_generated_at"] if branch_report else None),
         "proposed_slate": result,
         "historical_watchlist": historical,
+        "branch_only_watchlist": branch_only_watchlist,
     }
 
 
@@ -181,7 +265,8 @@ def main() -> None:
     quality = json.loads(QUALITY.read_text(encoding="utf-8"))
     drafts = json.loads(DRAFTS.read_text(encoding="utf-8"))
     cfg = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
-    result = build_public(selection, quality, drafts, cfg)
+    branch_report = json.loads(BRANCHES.read_text(encoding="utf-8"))
+    result = build_public(selection, quality, drafts, cfg, branch_report=branch_report)
     OUTPUT.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{len(result['proposed_slate'])} candidatos públicos clasificados por preparación editorial; "
           "no se cambia el portfolio.")

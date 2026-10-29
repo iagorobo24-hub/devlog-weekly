@@ -77,6 +77,9 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
     rows = []
     for c in candidates:
         status = str(c.get("ci_status", "unknown"))
+        unmerged = c.get("unmerged_code_7d", 0) + c.get("unmerged_tests_7d", 0)
+        extra = (f" · {unmerged} commits en ramas no fusionadas (no en main)"
+                 if unmerged else "")
         rows.append(
             '<div style="border:1px solid #275064;border-radius:9px;padding:10px 15px;'
             'background:#102438;margin-bottom:8px;">'
@@ -84,7 +87,7 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
             f'<span style="float:right;font-size:13px;color:#ffd186;">{esc(status)}</span>'
             f'<p style="font-size:14px;color:#a3b9c9;margin-top:3px;">'
             f'{len(c["blockers"])} comprobaciones pendientes · '
-            f'{esc(c["repo"])}</p></div>')
+            f'{esc(c["repo"])}{esc(extra)}</p></div>')
     slides.insert(-1, page(
         "review-index",
         '<div class="pf-meta">PROPUESTA / PRIORIZACIÓN NO DEFINITIVA</div>'

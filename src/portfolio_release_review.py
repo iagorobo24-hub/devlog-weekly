@@ -208,6 +208,9 @@ def build_review(selection: dict, quality: dict, strategy: dict,
             "source_presence_verified_at_revision": sources_present,
             "ci_run_url_at_head": ci_run_url,
             "source_presence_is_not_statement_or_runtime_proof": True,
+            "unmerged_code_7d": s.get("unmerged_code_7d", 0),
+            "unmerged_tests_7d": s.get("unmerged_tests_7d", 0),
+            "branch_activity_is_not_main_evidence": True,
             "blockers": blockers, "approved_for_release": False,
         })
     return {

@@ -38,6 +38,10 @@ jobs:
           assert result["limits"]["ranking_is_not_proof_of_functionality"] is True
           print("PUBLIC-ONLY selection verified")
           PYCODE
+      - name: Auditar commits públicos de ramas aún no fusionadas
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run python -m src.public_branch_activity
       - name: Verificar calidad pública por HEAD y CI real
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -63,6 +67,7 @@ jobs:
           name: project-selection-public-preview
           path: |
             out/project-selection-public.json
+            out/project-branch-activity-public.json
             out/project-selection-review.json
             out/project-quality-public.json
             out/candidate-profiles-review.json

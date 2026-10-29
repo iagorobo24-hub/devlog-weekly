@@ -57,6 +57,27 @@ def render(strategy: dict, drafts: dict) -> str:
         content.append("| " + " | ".join((
             clean(p["title"]), priority, clean(p["ci_status"]), clean(p["editorial_tier"])
         )) + " |")
+    feature_items = [p for p in strategy.get("proposed_slate", [])
+                     if p.get("unmerged_code_7d", 0) + p.get("unmerged_tests_7d", 0) > 0]
+    branch_only = strategy.get("branch_only_watchlist", [])
+    if any(row.get("visibility") != "public" or row.get("publishable") is not False
+           for row in branch_only):
+        raise ValueError("Seguimiento de ramas privado o publicable")
+    if feature_items or branch_only:
+        content += [
+            "", "## Desarrollo reciente en ramas no fusionadas — evidencia separada",
+            "", "Los siguientes commits no se consideran integrados en la rama principal,",
+            "ni verificados por su CI. Los recuentos son SHA únicos observados",
+            "y pueden ser mínimos si el análisis de ramas quedó truncado.",
+            "", "| Proyecto | Código 7 días | Tests 7 días | Cobertura |",
+            "|---|---:|---:|---|",
+        ]
+        for row in feature_items + branch_only:
+            content.append("| " + " | ".join((
+                clean(row["title"]), str(row["unmerged_code_7d"]),
+                str(row["unmerged_tests_7d"]),
+                "completa" if row.get("branch_scan_complete") else "parcial",
+            )) + " |")
     historical = strategy.get("historical_watchlist", [])
     if historical:
         content += ["", "## Proyectos históricos que requieren evidencia nueva", "",
