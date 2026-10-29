@@ -90,6 +90,30 @@ class QualityContracts(unittest.TestCase):
         self.assertEqual(repo.get_contents.call_args_list[1].args[0],"30-tools")
         self.assertEqual(repo.get_contents.call_args_list[1].kwargs["ref"],SHA)
 
+    def test_queries_only_exact_default_head_before_truncation(self):
+        from types import SimpleNamespace as NS
+        gh = Mock()
+        repo = gh.get_repo.return_value
+        repo.private = False
+        repo.archived = False
+        repo.default_branch = "main"
+        repo.get_branch.return_value.commit.sha = SHA
+        repo.get_contents.side_effect = [
+            [NS(path="README.md", name="README.md", type="file"),
+             NS(path="tests", name="tests", type="dir")],
+            [NS(name="ci.yml", type="file")],
+        ]
+        workflow = NS(id=88, head_sha=SHA, head_branch="main", event="push",
+                      created_at=NOW-timedelta(hours=3), conclusion="success",
+                      html_url="https://github.com/owner/repo/actions/runs/88")
+        repo.get_workflow_runs.return_value = [workflow]
+        facts = repo_facts(gh, "owner/repo")
+        repo.get_workflow_runs.assert_called_once_with(
+            event="push", branch="main", head_sha=SHA)
+        self.assertEqual(
+            assess_head_ci(head=SHA, branch="main", runs=facts["runs"], now=NOW)["status"],
+            "success_at_head")
+
     def test_public_quality_report_rejects_private_candidate(self):
         s={"visibility":"public","schema":1,
            "ranked":[{"visibility":"private","repos":["owner/private"]}]}
