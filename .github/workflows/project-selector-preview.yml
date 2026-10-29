@@ -74,6 +74,8 @@ jobs:
         run: uv run python -m src.render_portfolio_review --no-html
       - name: Componer el portfolio V3 propuesto sin publicar
         run: uv run python -m src.render_portfolio_proposal
+      - name: Generar cierre de selección editorial V4 sin publicar
+        run: uv run python -m src.render_portfolio_editorial_closure
       - uses: actions/upload-artifact@v4
         with:
           name: project-selection-public-preview
@@ -95,5 +97,7 @@ jobs:
             out/portfolio-review-v2-manifest.json
             out/portfolio-proposal-v3.md
             out/portfolio-proposal-v3-manifest.json
+            out/portfolio-editorial-closure-v4.md
+            out/portfolio-editorial-closure-v4-manifest.json
           if-no-files-found: error
           retention-days: 14

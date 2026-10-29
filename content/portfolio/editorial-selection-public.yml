@@ -1,0 +1,108 @@
+version: 1
+visibility: public
+status: frozen_editorial_scope_not_release_approval
+decision_date: '2026-10-29'
+selection_goal: Casos profesionales de ingeniería industrial y desarrollo de software
+audience: Revisión profesional y técnica; no publicidad de productos terminados
+policy:
+  evaluate_recent_commits_as_secondary: true
+  require_pinned_public_sources: true
+  do_not_infer_runtime_from_ci: true
+  exclude_uninspected_nonpublic_work: true
+  automatic_publication: false
+  existing_portfolio_unchanged: true
+scope_note: Solo repositorios públicos de iagorobo24-hub; otros trabajos requieren inventario separado y autorización antes de valorar su inclusión.
+main_cases:
+  - repo: iagorobo24-hub/T-IA-Portal-RocaRoibas
+    revision: 5bb5397297724e2c3a4c1c7e67b4132368f12516
+    title: TIA Portal RocaRoibas
+    field: Ingeniería y automatización industrial
+    problem: Un agente de IA necesita operar sobre proyectos TIA Portal sin confundir lectura, escritura, simulación y cambios de producción.
+    solution: Workspace con servidores MCP tia-inspect y tia-create, contratos, recetas Openness y compuertas de seguridad para cambios aislados.
+    contributions:
+      - Dos servidores MCP con perfiles de acceso diferenciados, documentados en README.
+      - Biblioteca de recetas, reglas AGENTS.md y 44 scripts de prueba descritos en el repositorio.
+      - Recorrido de aprobación que separa copia, previsualización, compilación, guardado y verificación.
+    evidence:
+      - claim: README documenta 44 scripts de pruebas y dos servidores MCP.
+        source_path: README.md
+        basis: repository_documentation
+      - claim: README informa pruebas de FB_AlarmLatch y FC_Escalado en CPU simulada; no se han reproducido en esta auditoría.
+        source_path: README.md
+        basis: repository_reported_runtime
+    limits: Resultados de TIA y PLCSIM reportados por el autor; la CI pública no ejecuta TIA Portal ni acredita uso en hardware real.
+    takeaway: IA industrial con control de operaciones y seguridad verificable por capas.
+  - repo: iagorobo24-hub/proyecto-pfc-iago-duran
+    revision: 205725a895986358e6e49e27c3629648857f86ad
+    title: PFC Tools
+    field: Aplicación web profesional y académica
+    problem: Procesos de fichas, almacén, incidencias, indicadores, presupuestos y formación aparecen fragmentados en herramientas aisladas.
+    solution: Suite web modular con panel unificado y acceso por rutas a siete herramientas, con funciones de IA donde están documentadas.
+    contributions:
+      - SPA con Dashboard Global y siete módulos enumerados en el README.
+      - Funciones de catálogo, simulación logística, KPI, informes y presupuestos.
+      - Gateway de IA descrito con autenticación de sesión, límites y separación de credenciales.
+    evidence:
+      - claim: README enumera siete módulos y el dashboard de acceso.
+        source_path: README.md
+        basis: repository_documentation
+      - claim: README describe la arquitectura React, Vite, Supabase y servicio API IA.
+        source_path: README.md
+        basis: repository_documentation
+    limits: Es un proyecto académico; documentación y presencia de E2E no demuestran el estado del despliegue ni de la CI en este corte.
+    takeaway: Integración práctica de procesos de negocio en una aplicación modular.
+  - repo: iagorobo24-hub/GuiaIA
+    revision: 685bd6d1f614793db7e34667846b4d83b199b550
+    title: GuiaIA
+    field: IA aplicada a Minecraft y sistemas agénticos
+    problem: Los asistentes no deben fingir que observan o modifican un mundo de Minecraft sin señales fiables y permisos acotados.
+    solution: Pasarela MCP de lectura, diagnóstico con métricas y propuestas deterministas de tareas; acompañante jugable todavía no incluido en main.
+    contributions:
+      - Cuatro herramientas MCP descritas para estado, métricas, diagnóstico y planificación de recolección sin ejecución.
+      - RCON opcional limitado a consultas locales y políticas de seguridad.
+      - Prototipos Fabric y trabajo en ramas feature separados de la versión alfa principal.
+    evidence:
+      - claim: README enumera cuatro herramientas MCP disponibles en main y distingue funciones planificadas.
+        source_path: README.md
+        basis: repository_documentation
+      - claim: Existe un conjunto de pruebas MCP en el repositorio.
+        source_path: tests/test_mcp.py
+        basis: repository_file_presence
+    limits: Developer preview, no acompañante jugable; la CI de ramas no fusionadas no valida main ni el juego.
+    takeaway: Observación fundamentada y acciones seguras antes de aspirar a autonomía.
+supporting_cases:
+  - repo: iagorobo24-hub/awesome-tia-portal
+    revision: 656213a21eed2646ff85ee0e330e6e1747bbc2d5
+    title: Awesome TIA Portal
+    field: Biblioteca de automatización
+    problem: Contratos de datos y bloques PLC reutilizables requieren documentación y trazabilidad por recurso.
+    solution: Catálogo público de UDT, FB/FC, HMI y plantillas, con estado declarado y matriz de fuentes y pruebas.
+    contributions:
+      - Catálogo e interfaces de piezas reutilizables para TIA Portal.
+      - Matriz de trazabilidad que separa recursos documentados de evidencia disponible.
+    evidence:
+      - claim: Matriz documenta recursos y evidencias con alcance individual, no certificación de toda la biblioteca.
+        source_path: MATRIZ-TRAZABILIDAD.md
+        basis: repository_documentation
+    limits: Sin importación XML generalizada; documentación contradictoria sobre algunas cifras de ejecución, que no se reproducen como hechos comprobados.
+    takeaway: Arquitectura de contratos y trazabilidad para reutilización PLC.
+  - repo: iagorobo24-hub/atm10sky-es-es-localization
+    revision: 1e0c648aafbf0204de1eaa2a191bcb7faf13b8c1
+    title: ATM10 To The Sky — es_es
+    field: Localización, control de calidad y Minecraft
+    problem: El libro de misiones FTB Quests necesita una traducción completa sin romper formato, macros ni referencias visuales.
+    solution: Archivo es_es.snbt y auditoría estática del texto con muestras de revisión dentro del cliente.
+    contributions:
+      - El README informa cobertura de 6.462 claves y cero claves ausentes frente al inglés.
+      - El README informa 189 descripciones revisadas y validaciones estáticas de formato.
+    evidence:
+      - claim: AUDIT_REPORT documenta métricas y límites de la candidata 191.
+        source_path: AUDIT_REPORT.md
+        basis: repository_reported_static_checks
+    limits: Métricas no recalculadas aquí; capturas de candidatas 183-190 y 38 claves de 191 sin revisión visual individual.
+    takeaway: Localización técnica con control de integridad y límites explícitos.
+excluded_cases:
+  - repo: iagorobo24-hub/AUTOMATON
+    revision: 710179ba1d4de55c6ed3a81776d1521ad9581d09
+    reason: CI fallida en HEAD y defectos de arranque y frontend descritos en README; mantener como laboratorio privado de la presentación pública, no como producto estable.
+    source_path: README.md
