@@ -63,7 +63,7 @@ perder la ventana ni duplicar narrativa.
 | Deck maestro y vídeo narrado | 🟡 | Implementados, con umbral de actividad; sin tests. |
 | Publicación en Drive con rclone | 🟡 | Implementada; depende de un `rclone.conf` con OAuth propio. |
 | Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. La generación histórica de semanas individuales no está reconstruida. |
-| Tests automáticos | 🚧 | No hay suite de tests ni CI de verificación. |
+| Tests automáticos | ✅ | 5 tests de regresión ejecutados con éxito en GitHub Actions el 29-10-2026. Cobertura todavía parcial. |
 
 ✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. Ninguna pieza está marcada como probada
 porque el repositorio no aporta pruebas automáticas.
@@ -109,7 +109,7 @@ se ejecutan tras publicar. Ojo: escriben en `state/`.
    un remote de Google Drive ya autorizado; el nombre del remote por defecto es `gdrive`, o `RCLONE_REMOTE`).
 3. Lanza el workflow `devlog semanal` a mano (`workflow_dispatch`) antes de fiarte del cron.
 
-El workflow necesita permiso `contents: write` para guardar `state/`.
+El workflow necesita permiso `contents: write` para guardar `state/`. El token temporal de GitHub Actions sustituye al PAT caducado para los repos públicos.
 
 </details>
 
@@ -127,7 +127,7 @@ Los secretos van en variables de entorno o en los secretos de Actions, nunca en 
 
 ## Límites conocidos
 
-- **Sin tests ni verificación automática.** No hay suite de pruebas; los scripts no se han validado de forma automatizada.
+- **Cobertura de tests limitada.** Hay 5 pruebas de regresión y un job CI obligatorio, pero faltan tests de integración para renderizado, límites de tasa, Drive y modelos externos.
 - **El texto lo escribe un modelo y nadie lo revisa.** Las narrativas y los titulares pueden contener errores o
   valoraciones no respaldadas por los commits. Revísalos antes de enseñarlos o publicarlos.
 - **Qué sale de tu máquina.** Al sintetizar se envían a NVIDIA NIM el título de los commits, issues y PRs, los tags y
@@ -156,7 +156,8 @@ src/
 templates/          deck.md.j2, portfolio.md.j2 y tema theme.css
 config/repos.yml    repos a seguir
 state/              last_run.json y narrative/*.md, versionados por el workflow
-.github/workflows/  weekly.yml (cron semanal)
+.github/workflows/  weekly.yml (cron semanal, disparo manual y validación por push)
+tests/              tests de regresión con unittest
 docs/               gráficos del README y mapa del sistema (PSM)
 ```
 
