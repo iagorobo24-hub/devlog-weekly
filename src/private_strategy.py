@@ -64,10 +64,18 @@ def build(selection: dict, quality: dict, local: dict, config: dict) -> dict:
     local_index = {r["repo"]: r for r in local.get("projects_to_review", [])
                    if r.get("repo") is not None}
     rows = []
-    for project in selection.get("ranked", []):
+    sections = ("ranked", "other_active")
+    if any(not isinstance(selection.get(k, []), list) for k in sections):
+        raise ValueError("sección de candidatos privados inválida")
+    candidates = [(k, p) for k in sections for p in selection.get(k, [])]
+    seen_repos = set()
+    for section, project in candidates:
         if project.get("visibility") != "private":
             raise ValueError("candidato público en informe privado")
         for repo in project.get("repos", []):
+            if repo in seen_repos:
+                raise ValueError("repo privado duplicado entre candidatos")
+            seen_repos.add(repo)
             info = priorities.get(repo)
             q = quality_index.get(repo, {})
             ci = q.get("ci", {}).get("status", "unknown")
@@ -85,6 +93,7 @@ def build(selection: dict, quality: dict, local: dict, config: dict) -> dict:
                 flags.append("test_path_not_detected")
             rows.append({
                 "repo": repo, "visibility": "private",
+                "selection_bucket": section,
                 "activity_score": project.get("activity_score"),
                 "priority": info["priority"] if info else None,
                 "priority_basis": info["basis"] if info else "unset",

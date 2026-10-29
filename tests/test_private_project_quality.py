@@ -24,5 +24,29 @@ class PrivateQualityTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,"prohibida"):
                 run(selection={"visibility":"private-local","ranked":[]},github_client=Mock())
 
+
+    def test_evaluates_private_overflow_without_public_access(self):
+        s = {"visibility": "private-local",
+             "ranked": [{"visibility": "private", "repos": ["owner/one"]}],
+             "other_active": [{"visibility": "private", "repos": ["owner/two"]}]}
+        with patch("src.private_project_quality.private_repo_facts",
+                   side_effect=lambda _, name: {"repo": name, "visibility": "private",
+                       "head": "a" * 40, "default_branch": "main", "readme": True,
+                       "test_paths": False, "workflows": False, "runs": []}) as probe:
+            result = from_selection(s, Mock(), NOW)
+        self.assertEqual([r["repo"] for r in result["records"]],
+                         ["owner/one", "owner/two"])
+        self.assertEqual(probe.call_count, 2)
+
+    def test_rejects_public_overflow_before_probing_any_repo(self):
+        s = {"visibility": "private-local",
+             "ranked": [{"visibility": "private", "repos": ["owner/one"]}],
+             "other_active": [{"visibility": "public", "repos": ["owner/public"]}]}
+        with patch("src.private_project_quality.private_repo_facts") as probe:
+            with self.assertRaisesRegex(ValueError, "contaminación"):
+                from_selection(s, Mock(), NOW)
+        probe.assert_not_called()
+
+
 if __name__=="__main__":
     unittest.main()

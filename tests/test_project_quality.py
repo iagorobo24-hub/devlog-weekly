@@ -103,5 +103,29 @@ class QualityContracts(unittest.TestCase):
             audit_project_quality.run(now=NOW,selector=selection,github_client=Mock())
 
 
+    def test_quality_probes_overflow_candidates(self):
+        selection = {"schema": 1, "visibility": "public",
+                     "generated_at": NOW.isoformat(),
+                     "ranked": [{"visibility": "public", "repos": ["owner/first"]}],
+                     "other_active": [{"visibility": "public", "repos": ["owner/second"]}]}
+        def facts(_, name):
+            return {"repo": name, "visibility": "public", "head": SHA,
+                    "default_branch": "main", "readme": True, "test_paths": True,
+                    "workflows": True, "runs": []}
+        with patch("src.project_quality.repo_facts", side_effect=facts) as probe:
+            result = public_quality_report(Mock(), selection, now=NOW)
+        self.assertEqual([r["repo"] for r in result["records"]],
+                         ["owner/first", "owner/second"])
+        self.assertEqual(probe.call_count, 2)
+
+    def test_quality_rejects_private_overflow(self):
+        selection = {"schema": 1, "visibility": "public", "ranked": [],
+                     "other_active": [{"visibility": "private",
+                                       "repos": ["owner/secret"]}]}
+        with self.assertRaisesRegex(ValueError, "private candidate"):
+            public_quality_report(Mock(), selection, now=NOW)
+
+
+
 if __name__ == "__main__":
     unittest.main()

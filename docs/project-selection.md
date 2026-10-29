@@ -198,3 +198,29 @@ una propuesta legible con la selección, CI del HEAD, fuentes fijadas a SHA y
 una lista de condiciones que aún impiden la publicación. No usa el PDF de
 producción, no accede a repositorios privados y no contiene conclusiones
 automáticas de éxito funcional.
+
+## Corrección de cobertura editorial (29-10-2026)
+
+Contrato de impacto: no cambiar la estética, PDFs publicados, Drive, repositorios
+de terceros ni el protocolo de autorización. Evitar que top_n limite el
+descubrimiento o descarte candidatos relevantes.
+
+- El primer grupo ranked sigue limitado por top_n para presentación; other_active
+  conserva las identidades y métricas completas de los demás candidatos
+  sustantivamente activos, en vez de un resumen incompleto.
+- Las evaluaciones de calidad pública y privada, la triage estratégica y la
+  revisión editorial consideran tanto ranked como other_active. Se verifican
+  explícitamente visibilidad, identidad y duplicados; ningún hallazgo acredita
+  funcionalidad E2E ni concede publicación.
+- La estrategia pública conserva además una lista separada de proyectos
+  históricos con prioridad editorial declarada (2 o superior), sin actividad
+  sustantiva reciente. No se someten a aprobación ni se confunden con proyectos
+  activos, ya que falta evidencia actual. Las prioridades continúan pendientes
+  de ratificación por el propietario.
+- Los informes privados permanecen exclusivamente en el directorio local
+  protegido 0700/0600. La ejecución CI está prohibida para ellos y el
+  portfolio público no los lee.
+- Los límites explícitos se mantienen: 100 grupos evaluados como máximo,
+  procedencia por revisión y sin autopublicación.
+- El PSM del repositorio mantiene su baseline antiguo sin recertificar;
+  este cambio requiere validación local y CI independiente.

@@ -35,5 +35,18 @@ class SelectionReviewTests(unittest.TestCase):
             build_review(self.selection, self.editorial)
 
 
+    def test_overflow_receives_editorial_review(self):
+        self.selection["other_active"] = [{
+            "id": "overflow", "title": "Overflow", "score": 5.0,
+            "active_7d": False, "visibility": "public",
+            "repos": ["iagorobo24-hub/overflow"]}]
+        report = build_review(self.selection, self.editorial)
+        self.assertEqual(len(report["recommended"]), 3)
+        self.assertEqual(report["recommended"][2]["selection_bucket"], "other_active")
+        self.assertEqual(report["recommended"][2]["decision"], "prepare_evidence_profile")
+        self.assertFalse(report["recommended"][2]["automatic_publication"])
+
+
+
 if __name__ == "__main__":
     unittest.main()

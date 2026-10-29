@@ -64,8 +64,12 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
         raise ValueError("Informes públicos inválidos")
     if quality.get("source_selection_generated_at") != selection.get("generated_at"):
         raise ValueError("Informe de calidad de otra revisión")
-    candidates = selection.get("ranked", [])
-    if any(c.get("visibility") != "public" for c in candidates):
+    sections = ("ranked", "other_active")
+    if any(not isinstance(selection.get(k, []), list) for k in sections):
+        raise ValueError("Secciones de candidatos inválidas")
+    candidates = [(k, c) for k in sections for c in selection.get(k, [])]
+    if any(not isinstance(c, dict) or c.get("visibility") != "public"
+           for _, c in candidates):
         raise ValueError("Candidato privado detectado")
     quality_map = {}
     for q in quality.get("records", []):
@@ -82,10 +86,17 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
     priorities = {repo: p["priority"] for p in config.get("projects", [])
                   for repo in p["repos"]}
     result = []
-    for candidate in candidates:
-        for repo in candidate.get("repos", []):
-            if not NAME_RE.fullmatch(repo):
+    seen_repos = set()
+    for section, candidate in candidates:
+        repos = candidate.get("repos")
+        if not isinstance(repos, list) or not repos:
+            raise ValueError("Candidato sin identidad de repositorio")
+        for repo in repos:
+            if not isinstance(repo, str) or not NAME_RE.fullmatch(repo):
                 raise ValueError("Repositorio inválido")
+            if repo in seen_repos:
+                raise ValueError("Repositorio repetido entre candidatos")
+            seen_repos.add(repo)
             q = quality_map.get(repo)
             if q is None:
                 raise ValueError("Candidato sin evaluación de calidad")
@@ -104,6 +115,7 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
                 reasons.append("Borrador con comprobaciones pendientes")
             result.append({
                 "repo": repo, "title": candidate["title"],
+                "selection_bucket": section,
                 "visibility": "public", "strategic_priority": priority,
                 "priority_basis": ("proposed_public_config_not_owner_confirmed"
                                    if priority is not None else "not_defined"),
@@ -114,6 +126,36 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
                 "editorial_tier": kind, "reasons": reasons,
                 "publishable": False, "automatic_publication": False,
             })
+    # Historical projects are visible for review, but never promoted just
+    # because an old editorial profile or a declared priority exists.
+    historical = []
+    watch = selection.get("watchlist", [])
+    if not isinstance(watch, list):
+        raise ValueError("Lista de seguimiento inválida")
+    for candidate in watch:
+        if not isinstance(candidate, dict) or candidate.get("visibility") != "public":
+            raise ValueError("Candidato privado detectado en seguimiento")
+        repos = candidate.get("repos")
+        if not isinstance(repos, list) or not repos:
+            raise ValueError("Seguimiento sin identidad de repositorio")
+        for repo in repos:
+            if not isinstance(repo, str) or not NAME_RE.fullmatch(repo):
+                raise ValueError("Repositorio de seguimiento inválido")
+            if repo in seen_repos:
+                raise ValueError("Repositorio duplicado en seguimiento")
+            seen_repos.add(repo)
+            priority = priorities.get(repo)
+            if priority is None or priority < 2 or candidate.get("spotlight") is False:
+                continue
+            historical.append({
+                "repo": repo, "title": candidate["title"],
+                "visibility": "public", "strategic_priority": priority,
+                "priority_basis": "proposed_public_config_not_owner_confirmed",
+                "watch_reason": candidate.get("watch_reason", "needs_new_evidence"),
+                "quality_status": "not_audited_in_current_active_selection",
+                "requires_fresh_evidence": True, "publishable": False,
+            })
+    historical.sort(key=lambda row: (-row["strategic_priority"], row["repo"]))
     tier_order = {"candidate_for_manual_review": 0,
                   "strategic_high_requires_verification": 1,
                   "observe_not_publication_ready": 2,
@@ -128,7 +170,9 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict) -> 
         "automatic_publication": False,
         "configured_priorities_are_not_owner_approval": True,
         "private_projects_excluded": True,
+        "all_active_candidates_considered": True,
         "proposed_slate": result,
+        "historical_watchlist": historical,
     }
 
 

@@ -60,5 +60,20 @@ class PrivateStrategyTests(unittest.TestCase):
             build(self.sel,self.quality,self.local,self.cfg)
 
 
+
+    def test_private_overflow_gets_strategic_review_not_publication(self):
+        self.sel["other_active"] = [{"visibility": "private",
+                                     "repos": ["owner/second"], "activity_score": 12}]
+        self.quality["records"].append({
+            "visibility": "private", "repo": "owner/second",
+            "ci": {"status": "unknown"}, "test_path_present": False})
+        result = build(self.sel, self.quality, self.local, self.cfg)
+        row = next(r for r in result["ranked_for_private_review"]
+                   if r["repo"] == "owner/second")
+        self.assertEqual(row["selection_bucket"], "other_active")
+        self.assertFalse(row["publishable"])
+        self.assertIn("strategic_priority_not_owner_confirmed", row["reasons_to_review"])
+
+
 if __name__ == "__main__":
     unittest.main()

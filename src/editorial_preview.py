@@ -37,6 +37,9 @@ def render(strategy: dict, drafts: dict) -> str:
     for d in drafts.get("drafts", []):
         if d.get("visibility") != "public" or d.get("publication_allowed") is not False:
             raise ValueError("borrador privado o autopublicado")
+    for row in strategy.get("historical_watchlist", []):
+        if row.get("visibility") != "public" or row.get("publishable") is not False:
+            raise ValueError("seguimiento privado o publicado indebidamente")
     draft_map = {d["repo"]: d for d in drafts.get("drafts", [])}
     content = [
         "# Propuesta de contenido del Portfolio Maestro — NO PUBLICAR",
@@ -54,6 +57,19 @@ def render(strategy: dict, drafts: dict) -> str:
         content.append("| " + " | ".join((
             clean(p["title"]), priority, clean(p["ci_status"]), clean(p["editorial_tier"])
         )) + " |")
+    historical = strategy.get("historical_watchlist", [])
+    if historical:
+        content += ["", "## Proyectos históricos que requieren evidencia nueva", "",
+                    "No se consideran activos ni validados: se conservan para revisión,",
+                    "sin reemplazar automáticamente los proyectos destacados.", "",
+                    "| Proyecto | Prioridad propuesta | Motivo de seguimiento |",
+                    "|---|---:|---|"]
+        for item in historical:
+            content.append("| " + " | ".join((
+                clean(item["title"]),
+                f"{item['strategic_priority']}/5",
+                clean(item["watch_reason"]),
+            )) + " |")
     content += ["", "## Fichas públicas preparadas", ""]
     for row in strategy.get("proposed_slate", []):
         draft = draft_map.get(row["repo"])

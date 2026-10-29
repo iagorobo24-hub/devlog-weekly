@@ -24,7 +24,8 @@ def build_review(selection: dict, editorial: dict,
     if selection.get("schema") != 1 or selection.get("visibility") != "public":
         raise ValueError("solo es válida la selección de repositorios públicos")
     groups = selection.get("ranked")
-    if not isinstance(groups, list):
+    overflow = selection.get("other_active", [])
+    if not isinstance(groups, list) or not isinstance(overflow, list):
         raise ValueError("selector no contiene candidatos")
     quality_index = {}
     if quality is not None:
@@ -39,12 +40,18 @@ def build_review(selection: dict, editorial: dict,
             quality_index[row["repo"]] = row
     catalog = {p["repo"] for p in editorial["projects"]}
     recommendations = []
-    for candidate in groups:
+    seen_candidates = set()
+    for section, candidate in ((k, c) for k, items in
+                               (("ranked", groups), ("other_active", overflow))
+                               for c in items):
         names = candidate.get("repos")
         if (candidate.get("visibility") != "public"
                 or not isinstance(names, list) or not names
                 or not all(isinstance(name, str) and NAME_RE.fullmatch(name) for name in names)):
             raise ValueError("candidato mixto, privado o inválido")
+        if seen_candidates.intersection(names):
+            raise ValueError("repo duplicado entre candidatos")
+        seen_candidates.update(names)
         available = sorted(set(names) & catalog)
         missing = sorted(set(names) - catalog)
         checks = [
@@ -58,6 +65,7 @@ def build_review(selection: dict, editorial: dict,
         ]
         recommendations.append({
             "id": candidate["id"], "title": candidate["title"],
+            "selection_bucket": section,
             "score": candidate["score"], "active_7d": candidate["active_7d"],
             "repos": names,
             "existing_editorial_profiles": available,
@@ -82,6 +90,9 @@ def build_review(selection: dict, editorial: dict,
         "automatic_publication": False,
         "recommended": recommendations,
         "showcase_not_in_top_candidates": sorted(
+            catalog - {repo for item in recommendations
+                       if item["selection_bucket"] == "ranked" for repo in item["repos"]}),
+        "showcase_without_active_candidate": sorted(
             catalog - {repo for item in recommendations for repo in item["repos"]}),
     }
 

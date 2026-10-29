@@ -22,15 +22,20 @@ except ModuleNotFoundError:
     from project_quality import private_repo_facts, evaluate_quality
 
 OUTPUT = PRIVATE_DIR / "project-quality-private.json"
-MAX_CANDIDATES = 12
+MAX_CANDIDATES = 100
 
 
 def from_selection(selection: dict, gh, now: datetime) -> dict:
     if selection.get("visibility") != "private-local":
         raise ValueError("no importar selección pública")
-    candidates = selection.get("ranked")
-    if not isinstance(candidates, list) or len(candidates) > MAX_CANDIDATES:
+    sections = [selection.get(k, []) for k in ("ranked", "other_active")]
+    if (any(not isinstance(rows, list) for rows in sections)
+            or sum(map(len, sections)) > MAX_CANDIDATES):
         raise ValueError("número de candidatos privados inválido")
+    candidates = [p for rows in sections for p in rows]
+    if any(not isinstance(p, dict) or p.get("visibility") != "private"
+           for p in candidates):
+        raise ValueError("contaminación del ranking privado")
     names = []
     for item in candidates:
         if item.get("visibility") != "private":

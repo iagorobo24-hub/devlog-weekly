@@ -70,5 +70,52 @@ class StrategicSelectionTests(unittest.TestCase):
             build_public(self.sel,self.qual,self.drafts,self.cfg)
 
 
+    def test_overflow_is_included_in_strategic_review(self):
+        other = {"visibility": "public", "title": "Overflow",
+                 "active_7d": True, "activity_score": 6,
+                 "repos": ["iagorobo24-hub/overflow"]}
+        self.sel["other_active"] = [other]
+        self.qual["records"].append({
+            "repo": "iagorobo24-hub/overflow", "visibility": "public",
+            "ci": {"status": "unknown"}, "evidence_score": 0,
+            "test_path_present": False, "head": "c" * 40})
+        result = build_public(self.sel, self.qual, self.drafts, self.cfg)
+        row = next(r for r in result["proposed_slate"] if r["repo"].endswith("overflow"))
+        self.assertEqual(row["selection_bucket"], "other_active")
+        self.assertFalse(row["publishable"])
+        self.assertTrue(result["all_active_candidates_considered"])
+
+    def test_private_overflow_and_duplicate_rejected(self):
+        item = dict(self.sel["ranked"][0])
+        item["visibility"] = "private"
+        self.sel["other_active"] = [item]
+        with self.assertRaisesRegex(ValueError, "privado"):
+            build_public(self.sel, self.qual, self.drafts, self.cfg)
+        item["visibility"] = "public"
+        with self.assertRaisesRegex(ValueError, "repetido"):
+            build_public(self.sel, self.qual, self.drafts, self.cfg)
+
+
+
+
+    def test_historical_priority_retained_without_promotion(self):
+        self.sel["watchlist"] = [{
+            "visibility": "public", "title": "Historic project",
+            "repos": ["iagorobo24-hub/TIA"], "spotlight": True,
+            "watch_reason": "no_substantive_activity_30d"}]
+        self.sel["ranked"] = self.sel["ranked"][:1]
+        result = build_public(self.sel, self.qual, self.drafts, self.cfg)
+        self.assertEqual([r["repo"] for r in result["historical_watchlist"]],
+                         ["iagorobo24-hub/TIA"])
+        self.assertFalse(result["historical_watchlist"][0]["publishable"])
+        self.assertTrue(result["historical_watchlist"][0]["requires_fresh_evidence"])
+
+    def test_private_watchlist_is_rejected(self):
+        self.sel["watchlist"] = [{"visibility": "private", "title": "Secret",
+                                  "repos": ["iagorobo24-hub/private"]}]
+        with self.assertRaisesRegex(ValueError, "privado"):
+            build_public(self.sel, self.qual, self.drafts, self.cfg)
+
+
 if __name__=="__main__":
     unittest.main()

@@ -22,7 +22,7 @@ TEST_NAMES = {"test", "tests", "__tests__", "spec", "specs", "e2e", "integration
 WORKFLOW_PREFIX = ".github/workflows/"
 DOC_NAMES = {"readme.md", "readme.rst", "readme", "readme.txt"}
 MAX_RUNS = 25
-MAX_REPOS = 20
+MAX_REPOS = 100
 
 
 def assess_head_ci(*, head: str, branch: str, runs: list[dict],
@@ -185,15 +185,18 @@ def public_quality_report(gh: Github, selection: dict, *,
                           now: datetime) -> dict:
     if selection.get("visibility") != "public" or selection.get("schema") != 1:
         raise ValueError("only public selection accepted")
-    ranked = selection.get("ranked", [])
-    if not isinstance(ranked, list) or len(ranked) > MAX_REPOS:
+    sections = [selection.get(k, []) for k in ("ranked", "other_active")]
+    if any(not isinstance(rows, list) for rows in sections) or sum(map(len, sections)) > MAX_REPOS:
         raise ValueError("selection count out of bounds")
     seen = set()
     records = []
-    for candidate in ranked:
-        if candidate.get("visibility") != "public":
+    for candidate in (p for rows in sections for p in rows):
+        if not isinstance(candidate, dict) or candidate.get("visibility") != "public":
             raise ValueError("private candidate blocked")
-        for name in candidate["repos"]:
+        names = candidate.get("repos")
+        if not isinstance(names, list) or not names:
+            raise ValueError("candidate without full repository identity")
+        for name in names:
             if not isinstance(name, str) or not NAME_RE.fullmatch(name):
                 raise ValueError("invalid candidate repository")
             if name in seen:

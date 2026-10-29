@@ -234,8 +234,7 @@ def build_selection(inventory: list[dict], config: dict, *, now: datetime,
                    "ranking_is_not_proof_of_functionality": True,
                    "may_omit_local_unpushed_changes": True},
         "ranked": suitable[:config["top_n"]],
-        "other_active": [{"id": p["id"], "score": p["score"],
-                          "active_7d": p["active_7d"], "counts": p["counts"], "visibility": allowed_visibility}
-                         for p in suitable[config["top_n"]:]],
+        # Top-N limits display, not downstream evidence coverage.
+        "other_active": suitable[config["top_n"]:],
         "watchlist": watchlist,
     }

@@ -205,5 +205,22 @@ class ProjectSelectionTests(unittest.TestCase):
             cli.discover(api, cfg, now=NOW, mode="public")
 
 
+    def test_top_n_does_not_discard_overflow_identity(self):
+        cfg = config()
+        cfg["top_n"] = 1
+        data = [repo("GuiaIA", [commit(1, 1, "feat: gateway")]),
+                repo("product-b", [commit(2, 1, "feat: product")]),
+                repo("product-c", [commit(3, 1, "test: behavior")])]
+        result = core.build_selection(data, cfg, now=NOW)
+        self.assertEqual(len(result["ranked"]), 1)
+        self.assertEqual(len(result["other_active"]), 2)
+        self.assertTrue(all(len(p["repos"]) == 1 and p["title"] and p["activity_score"] > 0
+                            and p["visibility"] == "public" for p in result["other_active"]))
+        all_names = {name for section in ("ranked", "other_active")
+                     for p in result[section] for name in p["repos"]}
+        self.assertEqual(all_names, {x["name"] for x in data})
+
+
+
 if __name__ == "__main__":
     unittest.main()

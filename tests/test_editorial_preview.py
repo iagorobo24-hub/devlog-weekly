@@ -30,5 +30,24 @@ class EditorialPreviewTests(unittest.TestCase):
             render(self.s,self.d)
 
 
+
+    def test_historical_candidate_is_reported_but_not_published(self):
+        self.s["historical_watchlist"] = [{
+            "visibility": "public", "publishable": False,
+            "title": "Historic", "strategic_priority": 2,
+            "watch_reason": "no_substantive_activity_30d"}]
+        text = render(self.s, self.d)
+        self.assertIn("Proyectos históricos", text)
+        self.assertIn("Historic", text)
+        self.assertIn("evidencia nueva", text)
+
+    def test_private_historical_entry_is_refused(self):
+        self.s["historical_watchlist"] = [{
+            "visibility": "private", "publishable": False,
+            "title": "Hidden", "strategic_priority": 4}]
+        with self.assertRaisesRegex(ValueError, "privado"):
+            render(self.s, self.d)
+
+
 if __name__ == "__main__":
     unittest.main()
