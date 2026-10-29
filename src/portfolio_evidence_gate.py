@@ -233,6 +233,37 @@ def build(spec: dict, editorial: dict, release: dict, published: dict,
     }
 
 
+def reconcile_ci_evidence(report: dict, quality: dict) -> dict:
+    """Flag contradictory HEAD/CI probes without implying either proves runtime."""
+    if (not isinstance(quality, dict) or quality.get("schema") != 1
+            or quality.get("visibility") != "public"
+            or quality.get("source_selection_generated_at")
+            != report.get("source_selection_generated_at")):
+        raise ValueError("Quality and evidence reports have different public snapshots")
+    indexed = {}
+    for item in quality.get("records", []):
+        if not isinstance(item, dict) or item.get("visibility") != "public":
+            raise ValueError("Private quality data cannot be reconciled")
+        repo = item.get("repo")
+        if not isinstance(repo, str) or not NAME_RE.fullmatch(repo) or repo in indexed:
+            raise ValueError("Quality data has invalid or duplicate identity")
+        indexed[repo] = item
+    differences = []
+    for item in report["cases"]:
+        other = indexed.get(item["repo"])
+        if not other:
+            continue   # PFC Tools is curated but not in active selector ranking.
+        left = other.get("ci", {}).get("status", "unknown")
+        right = item["ci"]["status"]
+        if other.get("head") == item["revision"] and left != right:
+            differences.append({"repo": item["repo"], "quality_ci": left,
+                                "evidence_ci": right,
+                                "not_runtime_evidence": True})
+    report["ci_reports_consistent"] = not bool(differences)
+    report["ci_report_disagreements"] = differences
+    return report
+
+
 def render_md(report: dict) -> str:
     rows = [
         "# Portfolio Maestro — auditoría de evidencias y capturas (no publicar)",
@@ -243,6 +274,12 @@ def render_md(report: dict) -> str:
         "| Proyecto | Push CI en HEAD | Fuentes | Archivos visuales | Publicable |",
         "|---|---|---|---:|---|",
     ]
+    if report.get("ci_report_disagreements"):
+        rows.extend(["", "## Inconsistencias de CI entre consultas", ""])
+        for item in report["ci_report_disagreements"]:
+            rows.append("- " + item["repo"] + ": evaluación " + item["quality_ci"] +
+                        " / auditoría exacta " + item["evidence_ci"])
+        rows.append("Revisar antes de considerar coherentes las evidencias.")
     for p in report["cases"]:
         found = sum(v["status"] == "present_at_revision" for v in p["visuals"])
         rows.append(f"| {p['repo']} | {p['ci']['status']} | "
@@ -278,6 +315,8 @@ def run(*, client=None) -> dict:
     else:
         report = build(spec, editorial, release, portfolio, client,
                        now=datetime.now(timezone.utc))
+    quality = json.loads((ROOT / "out/project-quality-public.json").read_text(encoding="utf-8"))
+    report = reconcile_ci_evidence(report, quality)
     OUT = ROOT / "out"
     OUT.mkdir(parents=True, exist_ok=True)
     for target, payload in ((OUTPUT, json.dumps(report, ensure_ascii=False, indent=2) + "\n"),
@@ -299,4 +338,5 @@ if __name__ == "__main__":
     result = run()
     print("Evidencia pública:", len(result["cases"]), "proyectos;",
           sum(len(x["visuals"]) for x in result["cases"]), "archivos visuales;",
-          "publicaciones aprobadas:", sum(x["ready_for_publication"] for x in result["cases"]))
+          "publicaciones aprobadas:", sum(x["ready_for_publication"] for x in result["cases"]),
+          "CI coherente:", result["ci_reports_consistent"])
