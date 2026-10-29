@@ -46,6 +46,10 @@ jobs:
         run: uv run python -m src.selection_review
       - name: Validar borradores públicos de nuevos proyectos
         run: uv run python -m src.candidate_profiles
+      - name: Selección estratégica con evidencia y prioridades explícitas
+        run: uv run python -m src.strategic_selection
+      - name: Generar propuesta de contenidos de portfolio sin publicar
+        run: uv run python -m src.editorial_preview
       - uses: actions/upload-artifact@v4
         with:
           name: project-selection-public-preview
@@ -54,5 +58,7 @@ jobs:
             out/project-selection-review.json
             out/project-quality-public.json
             out/candidate-profiles-review.json
+            out/project-strategy-public.json
+            out/portfolio-content-proposal.md
           if-no-files-found: error
           retention-days: 14

@@ -158,3 +158,43 @@ a un PDF público necesita una autorización explícita sobre qué mostrar.
 - Decidir qué proyectos privados, si alguno, pueden tener una versión pública.
 - Incorporar únicamente los proyectos aprobados al portfolio maestro,
   conservando el diseño validado.
+
+
+## Fase estratégica: actividad, importancia y calidad son distintas
+
+El informe público out/project-strategy-public.json añade una triage que
+considera prioridades editoriales explícitas del archivo de configuración,
+evidencia de CI sobre HEAD, rutas de pruebas y existencia de borradores
+versionados. Un proyecto con alta importancia pero CI pendiente queda como
+strategic_high_requires_verification; si la CI del HEAD falla se clasifica
+block_until_ci_diagnosis sin esconder el fallo por volumen de commits.
+
+Incluso un proyecto con CI correcta y ficha válida queda en
+candidate_for_manual_review: no se autopublica. Las fichas deben estar
+fijadas al HEAD comprobado y no contener advertencias de revisión obsoleta.
+Si no existe prioridad expresa, el motor registra not_defined y no la
+infiere de la actividad reciente.
+
+La estrategia privada se mantiene estrictamente local:
+python -m src.private_strategy produce un informe 0600 con propuestas
+temporales en strategic-priorities.yml fuera del repositorio. El estado
+inferred_proposal nunca equivale a explicit_owner, y el resultado mantiene
+publishable: false en todas sus filas. Se incluyen proyectos exclusivamente
+locales sin confundir sus archivos modificados con commits de GitHub.
+
+El diseño y la publicación del portfolio maestro siguen congelados.
+Para cerrarlos faltan autorización de exposición de cada proyecto privado,
+evidencia funcional y aprobación editorial del contenido final.
+
+
+Las prioridades configuradas para los proyectos públicos constituyen
+propuestas editoriales del sistema, no prioridades ratificadas por el usuario.
+La salida lo señala como proposed_public_config_not_owner_confirmed. No debe
+interpretarse el valor 5/5 como una aprobación o una prueba de mayor valor.
+
+
+La vista previa pública produce asimismo out/portfolio-content-proposal.md:
+una propuesta legible con la selección, CI del HEAD, fuentes fijadas a SHA y
+una lista de condiciones que aún impiden la publicación. No usa el PDF de
+producción, no accede a repositorios privados y no contiene conclusiones
+automáticas de éxito funcional.
