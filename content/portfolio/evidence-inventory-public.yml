@@ -1,0 +1,96 @@
+version: 1
+visibility: public
+purpose: prepublication_evidence_and_media_inventory
+editorial_selection_status: frozen_editorial_scope_not_release_approval
+release_approved: false
+allow_publication: false
+reports_runtime_verification: false
+owner_image_use_approval: false
+projects:
+  - repo: iagorobo24-hub/T-IA-Portal-RocaRoibas
+    revision: 5bb5397297724e2c3a4c1c7e67b4132368f12516
+    role: main
+    claim:
+      source_path: README.md
+      note: Dos servidores MCP, recetas y procedimientos de seguridad descritos en README.
+      basis: documented_by_repository
+    visuals:
+      - path: docs/img/arquitectura.svg
+        kind: conceptual_diagram
+        applies_to_current_release: false
+        approved_for_public_use: false
+    missing_validation:
+      - Registro independiente de sesión TIA Portal y comportamiento Openness.
+      - Captura de entorno TIA, con permiso y datos técnicos saneados.
+  - repo: iagorobo24-hub/proyecto-pfc-iago-duran
+    revision: 205725a895986358e6e49e27c3629648857f86ad
+    role: main
+    claim:
+      source_path: README.md
+      note: Dashboard y siete módulos web descritos; estado de despliegue pendiente de validar.
+      basis: documented_by_repository
+    visuals:
+      - path: app/e2e/screenshots/05-almacen.png
+        kind: e2e_repository_image
+        applies_to_current_release: unknown
+        approved_for_public_use: false
+      - path: app/e2e/screenshots/07-kpi-resultados.png
+        kind: e2e_repository_image
+        applies_to_current_release: unknown
+        approved_for_public_use: false
+    missing_validation:
+      - Diagnosticar CI fallida en el SHA de main y volver a probar aplicación.
+      - Comprobar que las capturas representan el estado final sin cuentas ni datos de terceros.
+  - repo: iagorobo24-hub/GuiaIA
+    revision: 685bd6d1f614793db7e34667846b4d83b199b550
+    role: main
+    claim:
+      source_path: README.md
+      note: Cuatro herramientas MCP disponibles en main; compañero jugable no entregado.
+      basis: documented_by_repository
+    visuals:
+      - path: assets/guiaia-hero.svg
+        kind: conceptual_illustration
+        applies_to_current_release: false
+        approved_for_public_use: false
+    missing_validation:
+      - Ejecutar las cuatro herramientas MCP contra fixture verificable y documentar resultados.
+      - No presentar arte conceptual como captura del acompañante dentro del juego.
+  - repo: iagorobo24-hub/awesome-tia-portal
+    revision: 656213a21eed2646ff85ee0e330e6e1747bbc2d5
+    role: supporting
+    claim:
+      source_path: MATRIZ-TRAZABILIDAD.md
+      note: Evidencia por recurso documentada; cifras globales requieren reconciliación.
+      basis: documented_by_repository
+    visuals:
+      - path: bloques-de-funcion/fb-alarm-latch/assets/tia-v20-fb-alarm-latch-2026-09-24.jpg
+        kind: repository_runtime_claimed_image
+        applies_to_current_release: unknown
+        approved_for_public_use: false
+      - path: bloques-de-funcion/fb-alarm-latch/assets/plcsim-control-panel-2026-10-21.png
+        kind: repository_runtime_claimed_image
+        applies_to_current_release: unknown
+        approved_for_public_use: false
+    missing_validation:
+      - Conciliar documentación de FB_AlarmLatch y FC_Escalado con actas PLCSIM.
+      - Confirmar origen, autoría y representatividad de imágenes antes de la publicación.
+  - repo: iagorobo24-hub/atm10sky-es-es-localization
+    revision: 1e0c648aafbf0204de1eaa2a191bcb7faf13b8c1
+    role: supporting
+    claim:
+      source_path: AUDIT_REPORT.md
+      note: Cifras reportadas de 6462 claves; candidata 191 sin comprobación visual exhaustiva.
+      basis: documented_by_repository
+    visuals:
+      - path: screenshots/mc_02_quests_overview.jpg
+        kind: screenshot_previous_candidate
+        applies_to_current_release: false
+        approved_for_public_use: false
+      - path: screenshots/mc_06_mekanism_popup.jpg
+        kind: screenshot_previous_candidate
+        applies_to_current_release: false
+        approved_for_public_use: false
+    missing_validation:
+      - Validar el archivo final 191 mediante captura de cliente y revisión de idioma.
+      - Aclarar permisos de distribución de imágenes y contenido del modpack.

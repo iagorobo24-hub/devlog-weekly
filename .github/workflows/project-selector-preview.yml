@@ -76,6 +76,10 @@ jobs:
         run: uv run python -m src.render_portfolio_proposal
       - name: Generar cierre de selección editorial V4 sin publicar
         run: uv run python -m src.render_portfolio_editorial_closure
+      - name: Contrastar CI, fuentes y capturas de la selección pública final
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run python -m src.portfolio_evidence_gate
       - uses: actions/upload-artifact@v4
         with:
           name: project-selection-public-preview
@@ -99,5 +103,7 @@ jobs:
             out/portfolio-proposal-v3-manifest.json
             out/portfolio-editorial-closure-v4.md
             out/portfolio-editorial-closure-v4-manifest.json
+            out/portfolio-evidence-public.json
+            out/portfolio-evidence-public.md
           if-no-files-found: error
           retention-days: 14
