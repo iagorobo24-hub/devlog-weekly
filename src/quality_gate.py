@@ -31,6 +31,14 @@ def validate_manifest(manifest_path: Path, expected_revisions: dict[str, str]) -
     return slides
 
 
+def normalized_public_url(url: str) -> tuple[str, str] | None:
+    """Treat only one harmless URL-renderer variant as equivalent: trailing '/'."""
+    uri = urlparse(url)
+    if uri.scheme != "https" or uri.username or uri.password or uri.query or uri.fragment:
+        return None
+    return uri.netloc.lower(), uri.path.rstrip("/")
+
+
 def check_pdf(path: Path, manifest: Path) -> dict:
     try:
         import fitz
@@ -67,13 +75,16 @@ def check_pdf(path: Path, manifest: Path) -> dict:
             raise ValueError("PDF sin suficientes capturas reales")
         if len(links) < sum(len(p["evidence"]) for p in data["projects"]):
             raise ValueError("faltan referencias clicables")
-        approved_sites = {p.get("demo_url") for p in data["projects"] if p.get("demo_url")}
+        approved_sites = {normalized_public_url(p["demo_url"]) for p in data["projects"]
+                          if p.get("demo_url")}
+        observed_sites = {normalized_public_url(url) for url in links}
         for project in data["projects"]:
-            if project.get("demo_url") and project["demo_url"] not in links:
+            if project.get("demo_url") and normalized_public_url(project["demo_url"]) not in observed_sites:
                 raise ValueError(f"enlace al sitio público ausente: {project['repo']}")
         for url in links:
             host = urlparse(url)
-            if host.scheme != "https" or not (host.netloc == "github.com" or url in approved_sites):
+            if host.scheme != "https" or not (host.netloc == "github.com"
+                                             or normalized_public_url(url) in approved_sites):
                 raise ValueError(f"enlace externo inesperado: {url}")
         return {"status": "pass", "pages": len(doc), "links": len(links),
                 "embedded_images": image_total, "projects": len(data["projects"])}

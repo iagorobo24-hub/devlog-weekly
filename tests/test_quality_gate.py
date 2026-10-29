@@ -10,6 +10,14 @@ from src.render_portfolio_v2 import build_slides
 
 
 class QualityGateTests(unittest.TestCase):
+    def test_trailing_slash_only_on_public_site_is_equivalent(self):
+        from src.quality_gate import normalized_public_url
+        site = "https://proyecto-pfc-iago-duran.vercel.app"
+        self.assertEqual(normalized_public_url(site), normalized_public_url(site + "/"))
+        self.assertNotEqual(normalized_public_url(site),
+                            normalized_public_url(site + "/pretend"))
+        self.assertIsNone(normalized_public_url(site + "/?token=unsafe"))
+
     def test_rejects_missing_or_wrong_revision(self):
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp)/"manifest.json"

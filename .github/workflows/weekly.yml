@@ -10,6 +10,11 @@ on:
         type: boolean
         required: true
         default: true
+      solo_portfolio:
+        description: 'Publicar solo el portfolio V2; no recopilar ni modificar devlog semanal ni state'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 
@@ -51,20 +56,23 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Recoger
+        if: ${{ inputs.solo_portfolio != true }}
         run: uv run python src/collect.py
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Sintetizar
+        if: ${{ inputs.solo_portfolio != true }}
         run: uv run python src/synthesize.py
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
 
       - name: Renderizar
+        if: ${{ inputs.solo_portfolio != true }}
         run: uv run python src/render.py
 
       - name: Publicar
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
         run: uv run python src/publish.py
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
@@ -72,7 +80,7 @@ jobs:
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
 
       - name: Prueba de extremo a extremo en Drive, con descarga y SHA256
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.modo_prueba == true }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.modo_prueba == true && inputs.solo_portfolio != true }}
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
           RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
@@ -110,7 +118,7 @@ jobs:
           PY
 
       - name: Confirmar estado
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
         # Deliberadamente después de publish.py: si algo falla antes de aquí,
         # el job para y state/ no se toca, así que la semana se puede
         # reintentar sin perder la ventana ni duplicar narrativa.
@@ -121,7 +129,12 @@ jobs:
       - name: Generar y validar Portfolio Editorial V2 (PDF + vídeo + subtítulos)
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         # Sólo se exponen las rutas de publicación una vez que pasa la validación de PDF y vídeo.
-        run: uv run --with pymupdf python src/run_portfolio_v2.py
+        run: |
+          if [ "${{ inputs.solo_portfolio }}" = "true" ]; then
+            uv run --with pymupdf python src/run_portfolio_v2.py --force
+          else
+            uv run --with pymupdf python src/run_portfolio_v2.py
+          fi
 
       - name: Publicar deck maestro
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
@@ -134,7 +147,7 @@ jobs:
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
 
       - name: Guardar estado
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
         run: |
           git config user.name "devlog-bot"
           git config user.email "bot@users.noreply.github.com"
