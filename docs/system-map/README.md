@@ -47,3 +47,11 @@ Las invariantes se detallan en [`invariants.md`](./invariants.md):
 ### Revisión remota de deriva — 2026-10-27
 
 [Consultar el registro GitHub de cambios y validaciones pendientes](./REVIEW-2026-10-27.md). La revisión **no** recertifica el mapa al último HEAD; `psm.source.commit` y los estados de evidencia históricos permanecen sin modificación hasta completar reconciliación y validación independiente.
+
+## Evidencia operativa posterior (29-10-2026, sin refrescar `psm.source.commit`)
+
+La ejecución GitHub Actions [#14](https://github.com/iagorobo24-hub/devlog-weekly/actions/runs/40792023387) completó `tests` (5/5), recolección pública (4/4 repos), síntesis (4/4 con `openai/gpt-oss-20b` como fallback), renderizado y publicación en Drive de PDF semanal, portfolio PDF y vídeo, seguido del commit de estado [e2b0ae8](https://github.com/iagorobo24-hub/devlog-weekly/commit/e2b0ae8f3b9c2a0eb6dc4fa3d9ed08e9154237fe).
+
+Cambios operativos observados: `src/collect.py` falla al no acceder a cualquier repo y bloquea repositorios privados; `src/synthesize.py` no permite que una síntesis parcial avance a publicación; el workflow usa `GITHUB_TOKEN` para los cuatro repos públicos y requiere tests antes del pipeline; `src/publish.py` admite credenciales opcionales de cliente OAuth propio vía entorno.
+
+**Validación PSM:** esta evidencia comprueba el flujo principal, no certifica todas las invariantes ni la deriva histórica contra `97a4319`. Sigue pendiente reconciliar el baseline existente, validar gestión de rate limits y completar la migración OAuth de Drive. No se modifica `manifest.yaml` ni el commit de fuente auditada.

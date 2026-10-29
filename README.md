@@ -62,7 +62,7 @@ perder la ventana ni duplicar narrativa.
 | Deck semanal (Marp → PDF) | 🟡 | Implementado; sin tests. |
 | Deck maestro y vídeo narrado | 🟡 | Implementados, con umbral de actividad; sin tests. |
 | Publicación en Drive con rclone | 🟡 | Implementada; depende de un `rclone.conf` con OAuth propio. |
-| Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El repositorio solo guarda commits de estado de las semanas 2026-W35 y W36; no se ha comprobado el resultado de ejecuciones posteriores. |
+| Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. La generación histórica de semanas individuales no está reconstruida. |
 | Tests automáticos | 🚧 | No hay suite de tests ni CI de verificación. |
 
 ✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. Ninguna pieza está marcada como probada
@@ -105,7 +105,7 @@ se ejecutan tras publicar. Ojo: escriben en `state/`.
 
 1. Haz un fork o copia del repositorio y edita `config/repos.yml` con tus repos (`showcase: true` y `pitch` a mano
    para los de escaparate; esa decisión no la toma el modelo).
-2. Añade los secretos del repositorio: `GH_PAT`, `NVIDIA_API_KEY` y `RCLONE_CONF` (contenido de un `rclone.conf` con
+2. Añade los secretos del repositorio: `NVIDIA_API_KEY` y `RCLONE_CONF` (contenido de un `rclone.conf` con
    un remote de Google Drive ya autorizado; el nombre del remote por defecto es `gdrive`, o `RCLONE_REMOTE`).
 3. Lanza el workflow `devlog semanal` a mano (`workflow_dispatch`) antes de fiarte del cron.
 
@@ -180,7 +180,7 @@ docs/               gráficos del README y mapa del sistema (PSM)
 
 - **Origen público:** el workflow usa `GITHUB_TOKEN` de GitHub Actions para leer exclusivamente los cuatro repos de `config/repos.yml`. El secreto `GH_PAT` anterior no se utiliza en Actions.
 - **Fallos visibles:** errores de acceso a cualquier repo y síntesis incompleta terminan el job con error, sin publicar ni avanzar `state/`. El job `tests` es requisito del pipeline.
-- **NVIDIA NIM:** la cadena antigua expiró el 26-08-2026. La nueva cadena utiliza candidatos documentados en el catálogo; su disponibilidad y permiso para esta cuenta deben confirmarse en una ejecución real. Puede configurarse `NIM_MODEL` en el entorno de ejecución para fijar un modelo probado.
+- **NVIDIA NIM:** la cadena antigua expiró en agosto de 2026. El 29-10-2026 se comprobó que `openai/gpt-oss-20b` funciona con esta cuenta y se situó como primer modelo. Las alternativas todavía requieren validación. Puede configurarse `NIM_MODEL` en el entorno de ejecución para fijar un modelo probado.
 - **Drive:** `RCLONE_CONF` sigue siendo necesario. Se admiten los secretos opcionales `RCLONE_DRIVE_CLIENT_ID` y `RCLONE_DRIVE_CLIENT_SECRET` para usar OAuth propio, sin publicar los valores. Hasta configurarlos, la publicación dependerá del cliente compartido que rclone retirará en 2026.
 - **Reprocesamiento:** el último cursor efectivo sigue en 2026-08-31. El primer run válido hará *catch-up* de la actividad de los repos públicos desde esa fecha, agrupada en un único informe; **no** restituye automáticamente un PDF independiente por semana. No reiniciar ni modificar manualmente el estado sin cotejar los históricos.
 - **Pruebas:** `uv run python -m unittest discover -s tests -v`.

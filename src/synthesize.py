@@ -18,15 +18,11 @@ Flags para iterar en desarrollo:
   --model MODEL_ID  fuerza un modelo concreto, sin cadena de fallback
 
 Modelo: NVIDIA NIM (https://integrate.api.nvidia.com/v1), API compatible con
-OpenAI. Por defecto se usa FALLBACK_MODELS, una cadena ordenada por calidad
-real observada (no solo tamaño): nvidia/llama-3.3-nemotron-super-49b-v1
-ganó tras comparar en real contra meta/llama-3.1-8b-instruct (demasiado
-genérico) y meta/llama-3.1-70b-instruct / meta/llama-3.3-70b-instruct (más
-grandes, pero ambos confundían el 'pitch' estático de config con actividad
-de esta semana, justo lo que el prompt pide evitar). Ninguno es el modelo
-más grande del catálogo NIM a propósito: los flagship/frontera
-(nemotron-ultra-253b, nemotron-3-ultra-550b, etc.) reciben más tráfico
-gratuito y se caen o rate-limitan más.
+OpenAI. Por defecto se usa FALLBACK_MODELS: openai/gpt-oss-20b fue
+validado en la ejecución real del 29-10-2026. Los modelos anteriores
+(nemotron-super-v1/v1.5 y los llama de 2026) devolvían HTTP 410.
+Las alternativas actuales del catálogo son candidatas, no están validadas
+para esta cuenta. NIM_MODEL permite fijar un modelo validado.
 
 Si un modelo falla (red, rate limit, JSON inválido...), se reintenta el
 MISMO modelo ATTEMPTS_PER_MODEL veces antes de darlo por caído y pasar al
@@ -64,9 +60,11 @@ NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 # se confirma con cada ejecución. Los modelos anteriores expiraron en 2026.
 # NIM_MODEL permite forzar un modelo validado desde el entorno.
 FALLBACK_MODELS = [
-    "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    # Validado con la cuenta en Actions el 2026-10-29 (4/4 repos).
     "openai/gpt-oss-20b",
+    # Alternativas del catálogo pendientes de validar para esta cuenta.
     "nvidia/nvidia-nemotron-nano-9b-v2",
+    "qwen/qwen3-next-80b-a3b-instruct",
 ]
 ATTEMPTS_PER_MODEL = 2
 RETRY_DELAY_SECONDS = 3
@@ -191,6 +189,8 @@ def call_model_once(client: OpenAI, model: str, prompt: str) -> dict:
         response = client.chat.completions.create(**kwargs)
 
     raw_text = response.choices[0].message.content
+    if not raw_text:
+        raise ValueError(f"{model}: la API devolvió una respuesta sin contenido (reintento)")
     data = parse_model_json(raw_text)
     missing = REQUIRED_KEYS - data.keys()
     if missing:
