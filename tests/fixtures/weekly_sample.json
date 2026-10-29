@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-10-29T01:00:00+00:00",
+  "repos": [
+    {
+      "name": "iagorobo24-hub/awesome-tia-portal",
+      "since": "2026-10-19T00:00:00+00:00",
+      "until": "2026-10-26T00:00:00+00:00",
+      "pitch": "Librería técnica reutilizable para TIA Portal",
+      "titular": "DEMO: preparación de una nueva versión con evidencias pendientes de revisión",
+      "avances": [
+        "Se reorganizaron las comprobaciones de calidad y la documentación del repositorio para separar las pruebas automáticas del análisis manual; la evidencia incluida aquí es sintética y no representa un resultado de producción.",
+        "El ejemplo reproduce una viñeta intencionadamente larga para comprobar si la presentación distribuye correctamente el texto entre diapositivas sin ocultar contenido al exportar a PDF.",
+        "Se revisaron las referencias a los cambios y su trazabilidad técnica, sin afirmar que las pruebas funcionales del hardware hayan superado aún los criterios de aceptación."
+      ],
+      "estado": "Demostración visual; los datos son ficticios y solo sirven para revisar la maquetación.",
+      "trivial": false,
+      "activity_counts": {
+        "commits": 8,
+        "prs": 2,
+        "issues": 0
+      },
+      "verified_sources": []
+    },
+    {
+      "name": "iagorobo24-hub/devlog-weekly",
+      "since": "2026-10-19T00:00:00+00:00",
+      "until": "2026-10-26T00:00:00+00:00",
+      "pitch": "Generador automático de informes de desarrollo",
+      "titular": "DEMO: trazabilidad por commit verificable",
+      "avances": [
+        "La demostración incorpora una referencia real a GitHub para verificar que sobrevive como enlace dentro del PDF."
+      ],
+      "estado": "Solo vista previa; no modifica estado ni Drive.",
+      "trivial": false,
+      "activity_counts": {
+        "commits": 1,
+        "prs": 0,
+        "issues": 0
+      },
+      "verified_sources": [
+        {
+          "kind": "commit",
+          "id": "45361ec0b7",
+          "title": "test(actions): add safe manual smoke run with isolated Drive upload and SHA256 round-trip",
+          "date": "2026-10-29T00:44:00+00:00",
+          "url": "https://github.com/iagorobo24-hub/devlog-weekly/commit/45361ec0b7622700a200bf76f500135ec14606d7"
+        }
+      ]
+    },
+    {
+      "name": "iagorobo24-hub/AUTOMATON",
+      "since": "2026-10-19T00:00:00+00:00",
+      "until": "2026-10-26T00:00:00+00:00",
+      "pitch": null,
+      "trivial": true,
+      "titular": "Sin actividad esta semana",
+      "avances": [],
+      "estado": "Sin cambios",
+      "activity_counts": {
+        "commits": 0,
+        "prs": 0,
+        "issues": 0
+      },
+      "verified_sources": []
+    }
+  ]
+}

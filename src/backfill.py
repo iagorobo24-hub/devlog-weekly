@@ -9,6 +9,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 from datetime import datetime, time, timedelta, timezone
@@ -68,46 +69,78 @@ def safe_text(value: str, limit: int = 160) -> str:
 
 
 def summarize_week(window: dict, repos: list[dict], max_items: int) -> tuple[str, dict]:
-    tick = chr(96)
-    content = [
-        "---", "marp: true", "theme: devlog", "paginate: true", "size: 16:9",
-        "---", "<!-- _class: lead -->", "# Archivo histórico (sin IA)",
-        "## " + window["week"],
-        window["since"].isoformat() + " a " + window["until"].isoformat()
-        + " UTC, extremo final exclusivo",
-        "**Semana parcial**" if window["partial"] else "Semana ISO completa",
-        "Metadatos de GitHub. Sin narrativas IA, tags ni diffs retroactivos."
-    ]
+    # Every event gets a visible reference; max_items limits PER SLIDE,
+    # never silently truncates the complete report.
+    from urllib.parse import quote
+
+    if not 1 <= max_items <= 8:
+        raise ValueError("max_items por diapositiva debe estar entre 1 y 8")
     info = {"week": window["week"], "since": window["since"].isoformat(),
             "until": window["until"].isoformat(), "partial": window["partial"],
             "repos": []}
+    active = []
     for repo in repos:
         commits = [e for e in repo["commits"] if in_window(e.get("date"), window["since"], window["until"])]
         issues = [e for e in repo["issues_closed"] if in_window(e.get("closed_at"), window["since"], window["until"])]
         prs = [e for e in repo["prs_closed"] if in_window(e.get("closed_at"), window["since"], window["until"])]
         info["repos"].append({"name": repo["name"], "commits": len(commits),
                               "issues_closed": len(issues), "prs_closed": len(prs)})
-        content.extend(["---", "## " + safe_text(repo["name"].split("/")[-1]),
-                        f"**Commits:** {len(commits)} · **PRs cerradas:** {len(prs)} · **Issues cerradas:** {len(issues)}"])
-        if not (commits or prs or issues):
-            content.append("_Sin eventos registrados._")
+        if commits or issues or prs:
+            active.append((repo["name"], commits, prs, issues))
+
+    totals = {k: sum(x[k] for x in info["repos"]) for k in ("commits", "prs_closed", "issues_closed")}
+    content = [
+        "---", "marp: true", "theme: devlog", "paginate: true", "size: 16:9",
+        "style: |", "  section.timeline { font-size: 19px; padding: 44px 54px; }",
+        "  section.timeline li { margin-bottom: 0.35em; line-height: 1.25; }",
+        "---", "<!-- _class: lead -->", "# Histórico verificable", "## " + window["week"],
+        window["since"].isoformat() + " a " + window["until"].isoformat() + " (UTC, fin exclusivo)",
+        "**Semana parcial**" if window["partial"] else "Semana ISO completa",
+        f"**{totals['commits']} commits · {totals['prs_closed']} PR · {totals['issues_closed']} issues**",
+        f"{len(active)} de {len(repos)} proyectos con actividad",
+        "Datos públicos de GitHub; sin narraciones históricas inventadas.",
+    ]
+
+    def append_pages(repo_name: str, section: str, items: list[str]) -> None:
+        for position in range(0, len(items), max_items):
+            chunk = items[position:position + max_items]
+            part = 1 + position // max_items
+            pages = (len(items) + max_items - 1) // max_items
+            content.extend(["---", "<!-- _class: timeline -->",
+                            "## " + safe_text(repo_name.split("/")[-1]),
+                            f"### {section} · {part}/{pages} · {len(items)} eventos"])
+            content.extend("- " + item for item in chunk)
+
+    for repo_name, commits, prs, issues in active:
+        # Repo identifiers are checked before adding hyperlinks.
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo_name):
+            raise ValueError(f"nombre de repositorio inválido: {repo_name}")
+        root = "https://github.com/" + repo_name
         if commits:
-            content.append("### Commits")
-            content.extend(
-                "- " + tick + c["sha"][:10] + tick + " " + safe_text(c["message"].splitlines()[0])
-                for c in commits[:max_items])
-            if len(commits) > max_items:
-                content.append(f"_Mostrados {max_items} de {len(commits)} commits._")
+            lines = []
+            for c in commits:
+                sha = c["sha"]
+                if not re.fullmatch(r"[0-9a-fA-F]{7,64}", sha):
+                    raise ValueError("SHA de commit inválido")
+                day = c["date"][:10] if c.get("date") else "fecha desconocida"
+                title = safe_text(c["message"].splitlines()[0], 115)
+                lines.append(f"[{sha[:10]}]({root}/commit/{sha}) · {day} · {title}")
+            append_pages(repo_name, "Commits verificables", lines)
         if prs:
-            content.append("### Pull requests cerradas")
-            content.extend(f"- #{p['number']} {safe_text(p['title'])}" for p in prs[:max_items])
-            if len(prs) > max_items:
-                content.append(f"_Mostradas {max_items} de {len(prs)} PRs._")
+            lines = [
+                f"[PR #{p['number']}]({root}/pull/{p['number']}) · {p['closed_at'][:10]} · "
+                + safe_text(p["title"], 120) + (" · fusionada" if p["merged"] else " · cerrada")
+                for p in prs
+            ]
+            append_pages(repo_name, "Pull requests cerradas", lines)
         if issues:
-            content.append("### Issues cerradas")
-            content.extend(f"- #{i['number']} {safe_text(i['title'])}" for i in issues[:max_items])
-            if len(issues) > max_items:
-                content.append(f"_Mostradas {max_items} de {len(issues)} issues._")
+            lines = [
+                f"[Issue #{issue['number']}]({root}/issues/{issue['number']}) · "
+                + issue["closed_at"][:10] + " · " + safe_text(issue["title"], 120)
+                for issue in issues
+            ]
+            append_pages(repo_name, "Issues cerradas", lines)
+
     return "\n\n".join(content) + "\n", info
 
 
@@ -134,9 +167,9 @@ def collect_public_repos(gh: Github, start: datetime, end: datetime, config: dic
 
 
 def write_backfill(start: datetime, end: datetime, repos: list[dict], target: Path,
-                   max_items: int = 15, pdf: bool = False) -> list[dict]:
-    if not 1 <= max_items <= 50:
-        raise ValueError("max_items debe estar entre 1 y 50")
+                   max_items: int = 5, pdf: bool = False) -> list[dict]:
+    if not 1 <= max_items <= 8:
+        raise ValueError("max_items por diapositiva debe estar entre 1 y 8")
     windows = week_windows(start, end)
     target.mkdir(parents=True, exist_ok=True)
     manifest = []
@@ -148,7 +181,7 @@ def write_backfill(start: datetime, end: datetime, repos: list[dict], target: Pa
             marp = shutil.which("marp")
             if not marp:
                 raise RuntimeError("marp no instalado")
-            subprocess.run([marp, str(src), "--pdf", "--theme-set", str(THEME_PATH),
+            subprocess.run([marp, str(src), "--pdf", "--no-stdin", "--theme-set", str(THEME_PATH),
                             "-o", str(target / (window["week"] + ".pdf"))], check=True)
         manifest.append(info)
         LOG.info("generada %s (%s repos)", window["week"], len(repos))
@@ -164,7 +197,7 @@ def main() -> None:
     parser.add_argument("--since", required=True)
     parser.add_argument("--until", required=True)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--max-items", type=int, default=15)
+    parser.add_argument("--max-items", type=int, default=5)
     parser.add_argument("--pdf", action="store_true")
     args = parser.parse_args()
     since, until = parse_utc(args.since), parse_utc(args.until)

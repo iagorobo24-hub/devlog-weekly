@@ -235,3 +235,26 @@ Las credenciales OAuth siguen viniendo exclusivamente de Actions Secrets.
 - [Pendiente #2](https://github.com/iagorobo24-hub/devlog-weekly/issues/2): baseline PSM inaccesible (GitHub 404); pendiente reconciliación y recertificación.
 
 La transferencia a Drive está comprobada mediante los registros de rclone. No se ha hecho todavía una lectura posterior independiente con comparación de hashes.
+
+
+## Informe de calidad: paginación, fuentes y vista previa
+
+- El histórico pagina todos los commits, PR e issues. El parámetro
+  --max-items controla entradas por página, no eventos totales.
+  Cada referencia incluye URL verificable y fecha obtenida de GitHub.
+- El semanal agrupa proyectos sin actividad en portada, aporta métricas
+  reales de actividad y ofrece enlaces a eventos observados. Los textos
+  extensos se distribuyen por páginas; no se finge haber validado un
+  despliegue sólo porque un commit lo mencione.
+- La síntesis recibe SHA, fechas y títulos. Se validan los tipos y
+  fechas explícitas fuera de ventana en los avances antes de publicar.
+  No se recertifican automáticamente narrativas históricas antiguas.
+- El workflow histórico ya no sube archivos a Drive automáticamente
+  al cambiar código: para publicar exige opt-in manual publicar_drive=true.
+  Por defecto sólo construye artefactos descargables.
+- Una ejecución manual de devlog CI genera un PDF de prueba sintético
+  sin acceso a los secretos de producción ni escritura de state o Drive.
+
+La mejora se contrasta con los PDF históricos originales y con una
+vista previa renderizada por GitHub Actions antes de habilitar el nuevo
+código en producción.

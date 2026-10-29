@@ -43,6 +43,8 @@ import argparse
 import json
 import logging
 import os
+import re
+from datetime import date, datetime
 import sys
 import time
 from pathlib import Path
@@ -75,23 +77,29 @@ REQUIRED_KEYS = {"titular", "avances", "estado", "narrativa_actualizada"}
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger("synthesize")
 
-PROMPT_TEMPLATE = """Eres un analista técnico. Te paso la actividad de esta semana en un repo
-y el historial de lo que ya se ha contado en semanas anteriores.
+PROMPT_TEMPLATE = """Eres un analista técnico riguroso. Tus únicas evidencias verificables son
+los commits (SHA y fecha), issues y PRs del JSON de esta ejecución.
+Los títulos de commits NO prueban por sí solos que algo esté desplegado,
+sea estable o haya superado pruebas. No afirmes eso sin evidencia.
 
-HISTORIAL PREVIO:
+HISTORIAL ANTERIOR (contexto no recertificado: puede contener errores):
 {narrativa_acumulada}
 
-ACTIVIDAD DE ESTA SEMANA:
+EVENTOS OBSERVADOS EN EL INTERVALO:
 {json_recogido}
 
-Devuelve JSON, sin markdown ni preámbulo, con estas claves:
-- "titular": una línea, qué es lo importante de esta semana
-- "avances": 2-4 bullets de lo que se movió de verdad
-- "estado": en qué punto está el proyecto ahora
-- "narrativa_actualizada": el historial previo actualizado con esta semana,
-  máximo 200 palabras, para pasártelo la semana que viene
-
-Si la actividad es trivial (typos, bumps de dependencias), dilo y no infles.
+Devuelve solo JSON válido con las claves:
+- "titular": un titular técnico concreto y sobrio
+- "avances": 2-4 viñetas concisas, basadas en eventos observados
+- "estado": situación acreditada por los eventos; indicar incertidumbre
+- "narrativa_actualizada": estado general actualizado (máx. 200 palabras)
+No uses etiquetas como Semana 1, Semana 2-10 o fechas deducidas de
+las etiquetas de versión. Si el intervalo supera 7 días, trátalo como
+actividad acumulada de ese periodo, no como una única semana.
+No traslades afirmaciones dudosas del historial como hechos probados.
+No inventes resultados, métricas, funcionalidades o fechas.
+Una etiqueta nueva detectada no revela cuándo fue creada.
+Si solo hay cambios triviales, dilo explícitamente.
 """
 
 
@@ -122,7 +130,11 @@ def condense(repo: dict) -> dict:
     """Solo lo que cambió esta semana. README y lenguajes se dejan fuera a
     propósito: son estáticos y empujan al modelo a re-describir el proyecto
     en vez de contar qué se movió (para eso ya están 'pitch' y el historial)."""
-    commit_titles = [c["message"].splitlines()[0] for c in repo["commits"][:MAX_COMMITS_LISTED]]
+    commit_events = [
+        {"sha": c["sha"], "fecha": c.get("date"),
+         "titulo": c["message"].splitlines()[0]}
+        for c in repo["commits"][:MAX_COMMITS_LISTED]
+    ]
     return {
         "repo": repo["name"],
         "pitch": repo.get("pitch"),
@@ -130,7 +142,7 @@ def condense(repo: dict) -> dict:
         "diff_stats": repo["diff_stats"],
         "commits": {
             "total": len(repo["commits"]),
-            "titulos": commit_titles,
+            "eventos": commit_events,
             "truncado": len(repo["commits"]) > MAX_COMMITS_LISTED,
         },
         "issues_cerradas": [{"number": i["number"], "title": i["title"]} for i in repo["issues_closed"]],
@@ -269,6 +281,52 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def validate_generated_summary(repo: dict, summary: dict) -> None:
+    # A source title is not proof of a claim, but fabricated/misplaced explicit
+    # dates can be rejected deterministically before they reach a PDF.
+    for key in ("titular", "estado", "narrativa_actualizada"):
+        if not isinstance(summary.get(key), str) or not summary[key].strip():
+            raise ValueError(f"campo inválido: {key}")
+    advances = summary.get("avances")
+    if not isinstance(advances, list) or not (1 <= len(advances) <= 8):
+        raise ValueError("avances requiere entre 1 y 8 viñetas")
+    if not all(isinstance(a, str) and a.strip() for a in advances):
+        raise ValueError("viñetas vacías o no textuales")
+    interval_start = date.fromisoformat(repo["since"][:10])
+    interval_end = date.fromisoformat(repo["until"][:10])
+    for item in [summary["titular"], summary["estado"], *advances]:
+        if re.search(r"\bsemana\s+\d+(?:\s*[-–]\s*\d+)?\b", item, re.I):
+            raise ValueError("numeración de semana sin anclaje factual")
+        for value in re.findall(r"\b20\d{2}-\d{2}-\d{2}\b", item):
+            when = date.fromisoformat(value)
+            if not interval_start <= when <= interval_end:
+                raise ValueError(f"fecha fuera del intervalo: {value}")
+
+
+def verified_sources(repo: dict) -> list[dict]:
+    # Enlaces extraídos de GitHub, nunca fabricados por el LLM.
+    name = repo["name"]
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", name):
+        raise ValueError("repositorio inválido para enlaces")
+    base = "https://github.com/" + name
+    out = []
+    for commit in repo["commits"]:
+        sha = commit["sha"]
+        if not re.fullmatch(r"[0-9a-fA-F]{7,64}", sha):
+            raise ValueError("SHA inválido")
+        out.append({"kind": "commit", "id": sha[:10], "title": commit["message"].splitlines()[0],
+                    "date": commit.get("date"), "url": f"{base}/commit/{sha}"})
+    for pr in repo["prs_closed"]:
+        number = int(pr["number"])
+        out.append({"kind": "pr", "id": f"PR #{number}", "title": pr["title"],
+                    "date": pr["closed_at"], "url": f"{base}/pull/{number}"})
+    for issue in repo["issues_closed"]:
+        number = int(issue["number"])
+        out.append({"kind": "issue", "id": f"Issue #{number}", "title": issue["title"],
+                    "date": issue["closed_at"], "url": f"{base}/issues/{number}"})
+    return out
+
+
 def ensure_complete_summaries(repos: list[dict], summaries: list[dict]) -> None:
     """No publicar ni confirmar estado si una síntesis necesaria falló."""
     expected = {repo["name"] for repo in repos}
@@ -310,8 +368,17 @@ def main() -> None:
         summary = synthesize_repo(client, model_chain, repo, previous_narrative, args.dry_run)
         if summary is None:
             continue
+        if not summary.get("trivial"):
+            validate_generated_summary(repo, summary)
         results.append(
             {
+                "activity_counts": {
+                    "commits": len(repo["commits"]),
+                    "prs": len(repo["prs_closed"]),
+                    "issues": len(repo["issues_closed"]),
+                    "tags": len(repo["tags_new"]),
+                },
+                "verified_sources": verified_sources(repo),
                 "name": repo["name"],
                 "showcase": repo["showcase"],
                 "pitch": repo["pitch"],

@@ -4,9 +4,9 @@ theme: devlog
 paginate: true
 size: 16:9
 style: |
-  section {
-    font-size: 26px;
-  }
+  section.compact { font-size: 22px; padding: 52px 65px; }
+  section.compact li { line-height: 1.3; margin-bottom: 0.4em; }
+  section.compact p { line-height: 1.3; }
 ---
 
 <!-- _class: lead -->
@@ -16,30 +16,26 @@ style: |
 
 {{ periodo_desde }} → {{ periodo_hasta }}
 
-{% for repo in repos %}
----
+**{{ active_count }} de {{ total_count }} repositorios con actividad**
 
-## {{ repo.name.split('/')[-1] }}
-{% if repo.pitch %}
-*{{ repo.pitch }}*
+_Generado: {{ generado }}_
+
+{% if inactive %}
+Sin cambios: {{ inactive | join(', ') }}
 {% endif %}
 
-### {{ repo.titular }}
-
-{% if repo.trivial %}
-_Sin actividad esta semana._
-{% endif %}
-
-{% if not repo.trivial %}
+{% for section in sections %}
 ---
 
-## {{ repo.name.split('/')[-1] }}
+<!-- _class: compact -->
 
-{% for avance in repo.avances %}
-- {{ avance }}
+## {{ section.heading }}
+{% if section.subtitle %}
+*{{ section.subtitle }}*
+{% endif %}
+
+{% for line in section.lines %}
+{{ line }}
+
 {% endfor %}
-
-**Estado:** {{ repo.estado }}
-
-{% endif %}
 {% endfor %}

@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import html
+import math
+import re
 import logging
 import shutil
 import subprocess
@@ -45,18 +48,110 @@ def format_date(iso_str: str) -> str:
     return datetime.fromisoformat(iso_str).strftime("%d/%m/%Y")
 
 
+def one_line(value: object) -> str:
+    # The LLM and GitHub commit titles are untrusted Markdown/HTML inputs.
+    text = " ".join(str(value or "").replace(chr(92) + "n", " ").split())
+    return html.escape(text).replace("|", "/")
+
+
+def split_long(text: object, limit: int = 160) -> list[str]:
+    words = one_line(text).split()
+    if not words:
+        return []
+    chunks: list[str] = []
+    part = ""
+    for word in words:
+        if part and len(part) + len(word) + 1 > limit:
+            chunks.append(part)
+            part = word
+        else:
+            part = (part + " " + word).strip()
+    if part:
+        chunks.append(part)
+    return chunks
+
+
+def paginated_bullets(bullets: list[str], max_units: int = 6) -> list[list[str]]:
+    """Paginate *all* text; no truncation, with a margin for line wrapping."""
+    items: list[str] = []
+    for raw in bullets:
+        for index, text in enumerate(split_long(raw, 145)):
+            items.append(("• " if index == 0 else "↳ ") + text)
+    pages: list[list[str]] = []
+    current: list[str] = []
+    units = 0
+    for item in items:
+        cost = max(1, math.ceil(len(item) / 72))
+        if current and units + cost > max_units:
+            pages.append(current)
+            current = []
+            units = 0
+        current.append(item)
+        units += cost
+    if current:
+        pages.append(current)
+    return pages
+
+
+def build_sections(summaries: dict) -> tuple[list[dict], list[str], list[dict]]:
+    repos = summaries["repos"]
+    active = [r for r in repos if not r.get("trivial", True)]
+    inactive = [r["name"].split("/")[-1] for r in repos if r.get("trivial", True)]
+    pages = []
+    if not active:
+        return [{"heading": "Sin cambios verificados",
+                 "subtitle": "Ninguno de los proyectos tuvo nuevos eventos de GitHub.",
+                 "lines": ["No se ha llamado a la IA ni hay avances nuevos que presentar."]}], inactive, active
+
+    pages.append({"heading": "Resumen de actividad", "subtitle": "Cambios registrados por GitHub, no éxitos de despliegue",
+                  "lines": [
+                      f"**{one_line(r['name'].split('/')[-1])}:** "
+                      f"{int(r.get('activity_counts', {}).get('commits', 0))} commits; "
+                      f"{int(r.get('activity_counts', {}).get('prs', 0))} PRs; "
+                      f"{int(r.get('activity_counts', {}).get('issues', 0))} issues."
+                      for r in active
+                  ]})
+    for repo in active:
+        name = one_line(repo["name"].split("/")[-1])
+        pages.append({"heading": name, "subtitle": one_line(repo.get("pitch") or ""),
+                      "lines": ["### " + one_line(repo["titular"])]})
+        for ix, part in enumerate(paginated_bullets(repo.get("avances", [])), start=1):
+            pages.append({"heading": name + " · avances " + str(ix),
+                          "subtitle": "", "lines": part})
+        state = split_long(repo.get("estado", ""), 160)
+        for ix, part in enumerate(paginated_bullets(state), start=1):
+            pages.append({"heading": name + " · estado " + str(ix),
+                          "subtitle": "", "lines": part})
+        evidence = repo.get("verified_sources", [])
+        if evidence:
+            links = []
+            for item in evidence[:5]:
+                # URLs are provided by the verified-source builder, not the model.
+                url = item["url"]
+                if not re.fullmatch(r"https://github[.]com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/(?:commit/[0-9a-fA-F]+|pull/[0-9]+|issues/[0-9]+)", url):
+                    raise ValueError("fuente de GitHub inválida")
+                label = one_line(item["id"])
+                title = one_line(item.get("title", ""))[:105]
+                day = str(item.get("date") or "")[:10]
+                links.append(f"• [{label}]({url}) · {day} · {title}")
+            if len(evidence) > 5:
+                links.append(f"**Y {len(evidence) - 5} eventos adicionales** en el historial de GitHub.")
+            pages.append({"heading": name + " · evidencias", "subtitle": "Referencias verificables (selección)",
+                          "lines": links})
+    return pages, inactive, active
+
+
 def render_markdown(summaries: dict) -> str:
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR), trim_blocks=True, lstrip_blocks=True)
     template = env.get_template(TEMPLATE_NAME)
-
     repos = summaries["repos"]
-    periodo_desde = min((r["since"] for r in repos), default=None)
-    periodo_hasta = max((r["until"] for r in repos), default=None)
-
+    since = min((r["since"] for r in repos), default="")
+    until = max((r["until"] for r in repos), default="")
+    pages, inactive, active = build_sections(summaries)
     return template.render(
-        repos=repos,
-        periodo_desde=format_date(periodo_desde) if periodo_desde else "",
-        periodo_hasta=format_date(periodo_hasta) if periodo_hasta else "",
+        sections=pages, inactive=inactive, active_count=len(active), total_count=len(repos),
+        periodo_desde=format_date(since) if since else "",
+        periodo_hasta=format_date(until) if until else "",
         generado=format_date(summaries["generated_at"]),
     )
 
@@ -67,7 +162,7 @@ def convert_to_pdf(md_path: Path, pdf_path: Path) -> None:
         log.error("marp-cli no está instalado (npm install -g @marp-team/marp-cli)")
         sys.exit(1)
     subprocess.run(
-        [marp, str(md_path), "--pdf", "--allow-local-files", "--theme-set", str(THEME_PATH), "-o", str(pdf_path)],
+        [marp, str(md_path), "--pdf", "--no-stdin", "--allow-local-files", "--theme-set", str(THEME_PATH), "-o", str(pdf_path)],
         check=True,
     )
 

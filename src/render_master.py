@@ -66,7 +66,7 @@ def load_narrative(repo_name: str) -> str:
     path = narrative_path(repo_name)
     if not path.exists():
         return ""
-    return path.read_text(encoding="utf-8").strip()
+    return path.read_text(encoding="utf-8").replace(chr(92) + "n", chr(10)).strip()
 
 
 def had_showcase_activity_this_week(showcase_names: set[str]) -> bool:
@@ -88,7 +88,7 @@ def convert_to_pdf(md_path: Path, pdf_path: Path) -> None:
         log.error("marp-cli no está instalado (npm install -g @marp-team/marp-cli)")
         sys.exit(1)
     subprocess.run(
-        [marp, str(md_path), "--pdf", "--allow-local-files", "--theme-set", str(THEME_PATH), "-o", str(pdf_path)],
+        [marp, str(md_path), "--pdf", "--no-stdin", "--allow-local-files", "--theme-set", str(THEME_PATH), "-o", str(pdf_path)],
         check=True,
     )
 

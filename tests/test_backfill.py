@@ -46,7 +46,7 @@ class HistoryTests(unittest.TestCase):
         ], "issues_closed": [], "prs_closed": []}]
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
-            result = backfill.write_backfill(start, end, repos, folder, 10)
+            result = backfill.write_backfill(start, end, repos, folder, 5)
             doc = (folder / "2026-W37.md").read_text()
             self.assertIn("abc1234567", doc)
             self.assertNotIn("def1234567", doc)
@@ -64,7 +64,10 @@ class HistoryTests(unittest.TestCase):
         ], "issues_closed": [], "prs_closed": []}
         markdown, _ = backfill.summarize_week(
             backfill.week_windows(start, end)[0], [repo], 2)
-        self.assertIn("Mostrados 2 de 4 commits", markdown)
+        self.assertIn("Commits verificables · 1/2", markdown)
+        self.assertIn("Commits verificables · 2/2", markdown)
+        for n in range(4):
+            self.assertIn(f"{n:010x}", markdown)
 
 
 if __name__ == "__main__":

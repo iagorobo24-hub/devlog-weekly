@@ -75,3 +75,20 @@ antigua hasta ejecutar reconciliación y validación suficiente.
 archivos antes de publicar en ruta separada `Portfolio/historico-verificable/`.
 La subida es inmutable: no reemplaza los resultados del cron. Este cambio
 amplía el dominio `dom-publisher` sin cambiar la línea base auditada.
+
+
+### Cambio material de informes: revisión P0 y P1 (octubre 2026)
+
+- El histórico src/backfill.py pagina de manera determinista todos
+  los eventos y conserva vínculos verificables.
+- src/synthesize.py incorpora SHA/fecha en el contexto del LLM,
+  controles de coherencia temporal y fuentes desde eventos reales.
+- src/render.py reduce páginas de repos sin actividad, añade resumen
+  objetivo y reparte textos largos entre diapositivas.
+- src/render_master.py normaliza saltos literales sin alterar el estado.
+- El workflow histórico impide subidas a Drive sin opt-in explícito.
+  CI admite muestras visuales independientes de producción.
+
+No se actualiza manifest.yaml ni se certifica el PSM histórico con
+commit fuente inaccesible. Las pruebas de PDF y la revisión manual de
+las narrativas siguen siendo condiciones de aceptación.
