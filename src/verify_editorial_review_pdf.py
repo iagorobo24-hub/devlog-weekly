@@ -61,6 +61,26 @@ def validate_source(md: str, manifest: dict) -> dict:
     return {"sha256": sha, "pages": 9, "projects": names}
 
 
+def normalize_metadata(path: Path) -> None:
+    """Set professional PDF metadata without changing visual content."""
+    import pymupdf
+    if not path.is_file() or path.is_symlink():
+        raise ValueError("PDF for metadata update is missing")
+    doc = pymupdf.open(path)
+    try:
+        metadata = dict(doc.metadata)
+        metadata.update({
+            "title": "Portfolio Maestro V4 | Revisión editorial",
+            "subject": "Selección pública revisada; no autorizada para publicación",
+            "creator": "Devlog Weekly · Marp",
+            "keywords": "portfolio, revisión editorial, borrador interno, no publicar",
+        })
+        doc.set_metadata(metadata)
+        doc.saveIncr()
+    finally:
+        doc.close()
+
+
 def validate_pdf(path: Path, source: dict) -> dict:
     import pymupdf
     if not path.is_file() or path.is_symlink() or path.stat().st_size < 5000:
@@ -71,6 +91,8 @@ def validate_pdf(path: Path, source: dict) -> dict:
     try:
         if doc.is_encrypted or len(doc) != 9:
             raise ValueError("Número de páginas incorrecto")
+        if doc.metadata.get("title") != "Portfolio Maestro V4 | Revisión editorial":
+            raise ValueError("Título PDF temporal o sin normalizar")
         for index, page in enumerate(doc):
             rect = page.rect
             if rect.width < 500 or rect.height < 280 or abs(rect.width / rect.height - 16 / 9) > 0.03:
@@ -122,11 +144,16 @@ def validate_pdf(path: Path, source: dict) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--preflight", action="store_true")
+    p.add_argument("--fix-metadata", action="store_true")
     args = p.parse_args()
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     source = validate_source(MD.read_text(encoding="utf-8"), manifest)
     if args.preflight:
         print("V4 source validated:", source["sha256"][:16])
+        return
+    if args.fix_metadata:
+        normalize_metadata(PDF)
+        print("Professional PDF metadata set")
         return
     result = validate_pdf(PDF, source)
     if QA.is_symlink() or QA.parent.resolve() != OUT.resolve():
