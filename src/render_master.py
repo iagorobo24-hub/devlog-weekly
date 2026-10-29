@@ -96,7 +96,7 @@ def load_portfolio_entries() -> list[dict]:
     return entries
 
 
-def build_slides(entries: list[dict], max_words: int = 65) -> list[dict]:
+def build_slides(entries: list[dict], max_words: int = 80) -> list[dict]:
     """Paginate all historical text, mark AI claims as unverified and link to provenance."""
     if not 30 <= max_words <= 85:
         raise ValueError("max_words must be between 30 and 85")
@@ -109,7 +109,15 @@ def build_slides(entries: list[dict], max_words: int = 65) -> list[dict]:
         pitch = html.escape(" ".join(str(entry.get("pitch") or "").split()))
         repo_url = "https://github.com/" + name
         words = str(entry.get("narrativa") or "").replace(chr(92)+"n", " ").split()
-        chunks = [words[i:i + max_words] for i in range(0, len(words), max_words)]
+        # Balance each page so the final slide is not an orphan of a few words.
+        page_count = max(1, (len(words) + max_words - 1) // max_words)
+        base, extra = divmod(len(words), page_count)
+        chunks = []
+        offset = 0
+        for page in range(page_count):
+            width = base + (1 if page < extra else 0)
+            chunks.append(words[offset:offset + width])
+            offset += width
         for index, chunk in enumerate(chunks, 1):
             content = " ".join(chunk)
             slides.append({"kind": "narrative", "title": title,

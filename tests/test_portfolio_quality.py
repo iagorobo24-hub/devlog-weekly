@@ -16,6 +16,16 @@ class TestPortfolioQuality(unittest.TestCase):
         self.assertEqual(slides[0]["part"], 1)
         self.assertEqual(slides[2]["total"], 3)
 
+    def test_pages_are_balanced_without_orphan_fragments(self):
+        entries = [{"name": "sample/repo", "pitch": "Demo",
+                    "narrativa": " ".join(f"item{i:03d}" for i in range(143)), "sources": []}]
+        slides = render_master.build_slides(entries)
+        self.assertEqual(len(slides), 2)
+        lengths = [len(slide["body"].split()) for slide in slides]
+        self.assertEqual(sum(lengths), 143)
+        self.assertLessEqual(max(lengths) - min(lengths), 1)
+        self.assertTrue(all(length <= 80 for length in lengths))
+
     def test_real_sources_only_and_separate_slide(self):
         items = [{"name": "sample/project", "pitch": "Demo", "narrativa": "Avance.",
                   "sources": [
@@ -38,7 +48,7 @@ class TestPortfolioQuality(unittest.TestCase):
         slides = render_master.build_slides(entries)
         markdown = render_master.render_markdown(entries)
         self.assertEqual(markdown.count("<!-- _class: portfolio -->"), len(slides))
-        self.assertEqual(len(slides), 3)
+        self.assertEqual(len(slides), 2)
         # Marp needs an empty line before every slide delimiter. A count of
         # Jinja slide entries alone does not verify actual slide boundaries.
         self.assertEqual(markdown.count("\n\n---\n\n"), len(slides))
