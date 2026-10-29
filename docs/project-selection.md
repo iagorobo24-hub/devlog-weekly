@@ -224,3 +224,20 @@ descubrimiento o descarte candidatos relevantes.
   procedencia por revisión y sin autopublicación.
 - El PSM del repositorio mantiene su baseline antiguo sin recertificar;
   este cambio requiere validación local y CI independiente.
+
+## Preflight de integración pública
+
+La evaluación src.portfolio_release_review considera los candidatos ranked
+y other_active con identidades y revisiones coherentes. Las fichas deben
+tener referencias versionadas, la CI debe coincidir exactamente con la
+revisión y las entradas privadas se rechazan. El informe aislado en
+out/portfolio-release-review.json distingue pruebas pendientes, capturas
+reales autorizadas y aprobación editorial del propietario.
+
+El resultado es de lectura y propuesta: ninguna CI verde ni prioridad
+estratégica permiten autopublicación. La selección original del portfolio,
+el diseño del PDF y Google Drive permanecen inalterados.
+
+El preflight también rechaza instantáneas de selección o calidad con más
+de 36 horas, marcas temporales futuras, y seguimiento público
+contaminado por elementos privados.

@@ -50,6 +50,8 @@ jobs:
         run: uv run python -m src.strategic_selection
       - name: Generar propuesta de contenidos de portfolio sin publicar
         run: uv run python -m src.editorial_preview
+      - name: Verificar controles de aprobación editorial pública
+        run: uv run python -m src.portfolio_release_review
       - uses: actions/upload-artifact@v4
         with:
           name: project-selection-public-preview
@@ -60,5 +62,6 @@ jobs:
             out/candidate-profiles-review.json
             out/project-strategy-public.json
             out/portfolio-content-proposal.md
+            out/portfolio-release-review.json
           if-no-files-found: error
           retention-days: 14
