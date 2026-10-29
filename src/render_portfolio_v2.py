@@ -14,9 +14,9 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 try:
-    from src.portfolio_data import ROOT, load_portfolio, recent_activity
+    from src.portfolio_data import ROOT, load_portfolio, recent_activity, revision_alerts
 except ModuleNotFoundError:
-    from portfolio_data import ROOT, load_portfolio, recent_activity
+    from portfolio_data import ROOT, load_portfolio, recent_activity, revision_alerts
 
 TEMPLATE_DIR = ROOT / "templates"
 THEME = TEMPLATE_DIR / "portfolio.css"
@@ -55,7 +55,8 @@ def page(kind: str, markup: str, narration: str, project: str | None = None) -> 
 
 
 def build_slides(data: dict, latest: list[dict] | None = None,
-                 generation_stamp: str = "Vista previa") -> list[dict]:
+                 generation_stamp: str = "Vista previa",
+                 drift: list[dict] | None = None) -> list[dict]:
     projects = data["projects"]
     slides = [
         page("cover",
@@ -173,6 +174,23 @@ def build_slides(data: dict, latest: list[dict] | None = None,
             "Estos son los eventos públicos de GitHub registrados en la última recolección para los proyectos seleccionados. "
             "Los títulos describen cambios declarados por sus autores; sus resultados deben validarse por separado."))
 
+    if drift:
+        comparisons = "".join(
+            f'<a class="pf-drift-item" href="{esc(item["url"])}">'
+            f'<strong>{esc(item["title"])}</strong>'
+            f'<span>Revisión editorial {esc(item["snapshot"])} · commit observado {esc(item["observed"])}</span>'
+            '<small>Revisar antes de actualizar capturas y afirmaciones ↗</small></a>'
+            for item in drift)
+        slides.append(page(
+            "drift",
+            '<div class="pf-meta">MANTENIMIENTO / EVIDENCIAS</div>'
+            '<h2>Hay actividad posterior al corte documental</h2>'
+            '<p class="pf-lead">Estas revisiones requieren comprobación humana. '
+            'La generación del PDF no modifica la evidencia anterior.</p>'
+            '<div class="pf-drift-grid">' + comparisons + '</div>',
+            "Se han detectado nuevos commits en proyectos destacados. "
+            "No se han actualizado automáticamente afirmaciones ni capturas: "
+            "primero deben revisarse los cambios y sus pruebas."))
     cards = "".join(
         f'<div class="pf-project-summary"><span class="pf-mini">{esc(p["title"])}</span>'
         + "".join(f'<p class="pf-next-item">↗ {esc(step)}</p>' for step in p["next_steps"][:2])
@@ -199,7 +217,9 @@ def render_markdown(slides: list[dict]) -> str:
 def write_preview(*, pdf: bool = True) -> tuple[list[dict], Path]:
     data = load_portfolio()
     generated_utc = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
-    slides = build_slides(data, recent_activity(data["projects"]), generation_stamp=generated_utc)
+    drift = revision_alerts(data["projects"])
+    slides = build_slides(data, recent_activity(data["projects"]),
+                          generation_stamp=generated_utc, drift=drift)
     markdown = render_markdown(slides)
     MD_PATH.parent.mkdir(parents=True, exist_ok=True)
     MD_PATH.write_text(markdown, encoding="utf-8")
@@ -208,6 +228,7 @@ def write_preview(*, pdf: bool = True) -> tuple[list[dict], Path]:
         "source": "content/portfolio/projects.yml",
         "generated_utc": generated_utc,
         "evidence_cutoff": data["edition"],
+        "revision_alerts": drift,
         "project_revisions": {p["repo"]: p["revision"] for p in data["projects"]},
         "slides": [{"index": index, "kind": s["kind"], "repo": s["repo"], "narration": s["narration"]}
                    for index, s in enumerate(slides, 1)],

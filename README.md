@@ -63,7 +63,7 @@ perder la ventana ni duplicar narrativa.
 | Deck maestro y vídeo narrado | ✅ | V2 editorial con PDF/MP4/SRT validados en vista previa; publicación final en Drive se comprueba por separado. |
 | Publicación en Drive con rclone | 🟡 | W44 e histórico publicados; pendiente sustituir el cliente compartido por OAuth propio (#1). |
 | Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. Las semanas W36–W43 se reconstruyeron y archivaron, preservando sus eventos originales. |
-| Tests automáticos | ✅ | 53 pruebas de regresión y controles CI de PDF, enlaces, imágenes y vídeo. Cobertura externa parcial. |
+| Tests automáticos | ✅ | Pruebas de regresión y controles CI de legibilidad, enlaces, imágenes, subtítulos y vídeo. Cobertura externa parcial. |
 
 ✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. El flujo W44 y los tests están verificados; la cobertura sigue siendo parcial.
 
@@ -126,7 +126,7 @@ Los secretos van en variables de entorno o en los secretos de Actions, nunca en 
 
 ## Límites conocidos
 
-- **Cobertura de tests:** 53 pruebas de regresión, además de validación PDF, imágenes y vídeo; CI de proyectos origen y Drive requieren evidencias de cada ejecución.
+- **Cobertura de tests:** regresiones automatizadas y validación PDF, imágenes y vídeo; CI de proyectos origen y Drive requieren evidencias de cada ejecución.
 - **El texto lo escribe un modelo y nadie lo revisa.** Las narrativas y los titulares pueden contener errores o
   valoraciones no respaldadas por los commits. Revísalos antes de enseñarlos o publicarlos.
 - **Qué sale de tu máquina.** Al sintetizar se envían a NVIDIA NIM el título de los commits, issues y PRs, los tags y

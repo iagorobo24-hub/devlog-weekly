@@ -64,6 +64,12 @@ def check_pdf(path: Path, manifest: Path) -> dict:
                 # Guard against clipping; very small layout tolerance for PDFs.
                 if x0 < -0.5 or y0 < -0.5 or x1 > pg.rect.width + 0.5 or y1 > pg.rect.height + 0.5:
                     raise ValueError(f"diapositiva {i+1}: texto fuera del lienzo")
+            # A geometric in-bounds test alone misses illegibly small text.
+            for block in pg.get_text("dict").get("blocks", []):
+                for line in block.get("lines", []):
+                    for span in line.get("spans", []):
+                        if span.get("text", "").strip() and span.get("size", 0) < 8.0:
+                            raise ValueError(f"diapositiva {i+1}: texto de menos de 8 pt")
             text_all.append(pg.get_text())
             image_total += len(pg.get_images())
             links.extend([l.get("uri", "") for l in pg.get_links() if l.get("uri")])

@@ -164,3 +164,32 @@ def recent_activity(projects: list[dict], path: Path = ROOT / "out" / "summaries
         if events:
             results.append({"repo": name, "title": allow[name]["title"], "events": events})
     return results
+
+
+def revision_alerts(projects: list[dict], path: Path = ROOT / "out" / "collected.json") -> list[dict]:
+    """Warn about collected commits beyond the curated source snapshot.
+
+    Never auto-promote a claim or rewrite curated image/verification revisions.
+    """
+    if not path.is_file():
+        return []
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ValueError("collected.json no válido") from exc
+    indexed = {p["repo"]: p for p in projects}
+    changes = []
+    for item in document.get("repos", []):
+        repo = item.get("name")
+        if repo not in indexed:
+            continue
+        for commit in item.get("commits", [])[:1]:
+            sha = commit.get("sha", "")
+            if isinstance(sha, str) and SHA_RE.fullmatch(sha) and sha != indexed[repo]["revision"]:
+                changes.append({
+                    "repo": repo, "title": indexed[repo]["title"],
+                    "snapshot": indexed[repo]["revision"][:10],
+                    "observed": sha[:10],
+                    "url": "https://github.com/" + repo + "/commit/" + sha,
+                })
+    return changes

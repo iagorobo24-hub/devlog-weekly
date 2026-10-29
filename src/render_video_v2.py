@@ -14,12 +14,12 @@ import subprocess
 from pathlib import Path
 
 try:
-    from src.portfolio_data import ROOT, load_portfolio, recent_activity
+    from src.portfolio_data import ROOT, load_portfolio, recent_activity, revision_alerts
     from src.render_portfolio_v2 import (
         MANIFEST_PATH, MD_PATH, THEME, build_slides, render_markdown, write_preview
     )
 except ModuleNotFoundError:
-    from portfolio_data import ROOT, load_portfolio, recent_activity
+    from portfolio_data import ROOT, load_portfolio, recent_activity, revision_alerts
     from render_portfolio_v2 import (
         MANIFEST_PATH, MD_PATH, THEME, build_slides, render_markdown, write_preview
     )
@@ -150,7 +150,8 @@ def render(*, image_dir: Path | None = None, smoke: bool = False,
         raise ValueError("falta el manifiesto de diapositivas")
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     slides = build_slides(data, recent_activity(data['projects']),
-                          generation_stamp=manifest.get("generated_utc", "Vista previa"))
+                          generation_stamp=manifest.get("generated_utc", "Vista previa"),
+                          drift=revision_alerts(data["projects"]))
     expected_md = render_markdown(slides)
     if not MD_PATH.exists() or MD_PATH.read_text(encoding="utf-8") != expected_md:
         raise ValueError("portfolio-v2.md no coincide con las fichas de proyecto; regenerar")

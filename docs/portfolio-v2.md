@@ -41,3 +41,21 @@ Las pruebas no modifican `state/`, no publican en Drive y no reescriben históri
 Las capturas son snapshots: no acreditan la instalación de sistemas industriales ni el estado actual de la web.
 La temporización de subtítulos se estima por el número de palabras; no es alineación fonética.
 Las fichas editoriales requieren mantenimiento cuando cambien los proyectos o las pruebas.
+
+## Pulido visual y fiabilidad editorial
+
+- Los diagramas editoriales se derivan de contratos documentados y se etiquetan
+  como esquemas explicativos, sin atribuirles ejecución de todos los bloques.
+- Los resultados publicados de TIA Portal quedan limitados a los dos recursos
+  documentados con pruebas en CPU virtual. Sus enlaces apuntan a la revisión
+  SHA fija del proyecto y a los ficheros de evidencia.
+- Las capturas de KPI y almacén se recortan para favorecer la lectura; su
+  origen sigue indicado mediante enlaces a las imágenes completas versionadas.
+- La portada distingue corte documental de generación del documento.
+- El PDF fija título, autor y asunto con PyMuPDF; la puerta de calidad exige
+  texto dentro del lienzo y tamaño mínimo de 8 puntos.
+- La voz y los subtítulos comparten limpieza de puntuación. La sincronización
+  SRT es aproximada por distribución de palabras; no por marcas fonéticas.
+- Si out/collected.json registra commits posteriores a la revisión editorial,
+  se añade una alerta con el SHA observado. Nunca se promociona
+  automáticamente una captura, prueba o afirmación a un estado más maduro.

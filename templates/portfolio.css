@@ -185,3 +185,10 @@ section[class*="pf-"] a:hover { text-decoration: underline; }
 .pf-walk-step b { font: 700 15px 'DejaVu Sans Mono', monospace; color: var(--pf-cyan); }
 .pf-walk-step p { font-size: 15px; line-height: 1.3; }
 .pf-walk-evidence { font-size: 13px; margin-top: 4px; }
+
+.pf-drift-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; margin-top: 38px; }
+.pf-drift-item { display: flex; flex-direction: column; min-height: 220px; gap: 12px; background: var(--pf-surface);
+  border: 1px solid var(--pf-rule); border-radius: 16px; padding: 28px; }
+.pf-drift-item strong { color: #e8f2fb; font-size: 25px; }
+.pf-drift-item span { color: #a3b9c9; font-size: 16px; }
+.pf-drift-item small { color: #47d5d1; font-size: 14px; margin-top: auto; }

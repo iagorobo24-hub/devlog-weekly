@@ -69,6 +69,34 @@ class EditorialPortfolioTests(unittest.TestCase):
             self.assertNotIn("ejecución desplegada y perfecta",md)
             self.assertNotIn("attacker.example",md)
 
+    def test_recent_commit_warns_without_mutating_curated_claims(self):
+        import json
+        from src.portfolio_data import revision_alerts
+        data = self.data
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp)/"collected.json"
+            f.write_text(json.dumps({"repos":[{
+                "name":data["projects"][0]["repo"],
+                "commits":[{"sha":"b"*40,"message":"feat: change"}]}]}))
+            warnings = revision_alerts(data["projects"],f)
+            self.assertEqual(len(warnings),1)
+            self.assertEqual(warnings[0]["snapshot"],data["projects"][0]["revision"][:10])
+            self.assertEqual(data["projects"][0]["revision"],
+                             "656213a21eed2646ff85ee0e330e6e1747bbc2d5")
+            slides=build_slides(data,drift=warnings)
+            self.assertEqual(len(slides),13)
+            self.assertEqual(slides[-2]["kind"],"drift")
+            self.assertIn(warnings[0]["url"],slides[-2]["markup"])
+
+    def test_focus_images_preserve_real_resolution(self):
+        from PIL import Image
+        root = Path(__file__).resolve().parent.parent
+        project = self.data["projects"][1]
+        for field in ("detail_image","second_image"):
+            with Image.open(root / project[field]) as img:
+                self.assertGreaterEqual(img.width, 650)
+                self.assertGreaterEqual(img.height, 600)
+
     def test_each_walkthrough_has_a_real_figure_and_pinned_link(self):
         slides = build_slides(self.data)
         for project in self.data["projects"]:
