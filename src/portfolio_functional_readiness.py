@@ -99,8 +99,9 @@ def extract(payload):
             low = name.lower()
             kind = ("security" if "production dependency audit" in low
                     else "unit" if "unittest" in low or "unit tests" in low
-                    else "workspace" if "workspacechecks" in low
-                    else "e2e" if "end-to-end tests" in low or "playwright" in low
+                    else "workspace" if "workspacechecks" in low or "ci-safe workspace checks" in low
+                    else "setup" if "install playwright" in low
+                    else "e2e" if "end-to-end tests" in low or "playwright test" in low
                     else "build" if "production build" in low
                     else "static" if low in ("lint", "typecheck") else None)
             if kind:
