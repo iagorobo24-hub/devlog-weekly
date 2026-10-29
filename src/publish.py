@@ -41,6 +41,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import hashlib
+import re
 import logging
 import os
 import shutil
@@ -55,6 +57,7 @@ SUMMARIES_PATH = ROOT / "out" / "summaries.json"
 DECK_PDF_PATH = ROOT / "out" / "deck.pdf"
 PORTFOLIO_PDF_PATH = ROOT / "out" / "portfolio.pdf"
 PORTFOLIO_MP4_PATH = ROOT / "out" / "portfolio.mp4"
+PORTFOLIO_SRT_PATH = ROOT / "out" / "portfolio.srt"
 
 DEFAULT_REMOTE = os.environ.get("RCLONE_REMOTE", "gdrive")
 
@@ -85,6 +88,31 @@ def master_remote_path(remote: str) -> str:
 
 def master_video_remote_path(remote: str) -> str:
     return f"{remote}:Portfolio/master/portfolio.mp4"
+
+
+def master_subtitle_remote_path(remote: str) -> str:
+    return f"{remote}:Portfolio/master/portfolio.srt"
+
+
+def verified_master_release(uploads: list[tuple[Path, str]], rclone_conf: str,
+                            remote: str, run_id: str) -> None:
+    """Version all outputs + SHA256 readback before replacing live aliases."""
+    if not re.fullmatch(r"[0-9]{5,20}-[0-9]{1,6}", run_id):
+        raise ValueError("GITHUB_RUN_ID inválido para publicación versionada")
+    stage_paths = []
+    for local, alias in uploads:
+        versioned = f"{remote}:Portfolio/master/versions/{run_id}/{local.name}"
+        upload(local, versioned, rclone_conf, remote, immutable=True)
+        stage_paths.append((local, alias, versioned))
+    with tempfile.TemporaryDirectory(prefix="master-v2-verify-") as tempdir:
+        for local, _, remote_version in stage_paths:
+            restored = Path(tempdir) / local.name
+            upload(Path(remote_version), str(restored), rclone_conf, remote)
+            if hashlib.sha256(local.read_bytes()).digest() != hashlib.sha256(restored.read_bytes()).digest():
+                raise ValueError(f"Drive no devolvió bytes idénticos: {local.name}")
+    for _, alias, versioned in stage_paths:
+        upload(Path(versioned), alias, rclone_conf, remote)
+    log.info("master V2 versionado, verificado y actualizado: %s", run_id)
 
 
 def upload(local_path: Path, dest: str, rclone_conf: str, remote: str, immutable: bool = False) -> None:
@@ -133,14 +161,21 @@ def main() -> None:
 
     if args.target == "master":
         uploads = []
-        if PORTFOLIO_PDF_PATH.exists():
-            uploads.append((PORTFOLIO_PDF_PATH, master_remote_path(args.remote)))
+        v2_release = os.environ.get("PORTFOLIO_V2_RELEASE") == "1"
+        paths = (
+            (PORTFOLIO_PDF_PATH, master_remote_path(args.remote)),
+            (PORTFOLIO_MP4_PATH, master_video_remote_path(args.remote)),
+            (PORTFOLIO_SRT_PATH, master_subtitle_remote_path(args.remote)),
+        )
+        if v2_release:
+            if any(p.exists() for p, _ in paths) and not all(p.is_file() for p, _ in paths):
+                raise RuntimeError("publicación parcial bloqueada: faltan artefactos V2")
+            uploads = [(p, alias) for p, alias in paths if p.is_file()]
         else:
-            log.info("%s no existe (el deck maestro no se generó esta semana); nada que publicar", PORTFOLIO_PDF_PATH)
-        if PORTFOLIO_MP4_PATH.exists():
-            uploads.append((PORTFOLIO_MP4_PATH, master_video_remote_path(args.remote)))
-        else:
-            log.info("%s no existe (el vídeo no se generó esta semana); nada que publicar", PORTFOLIO_MP4_PATH)
+            # Legacy caller keeps previous behavior (PDF/MP4 optional).
+            uploads = [(p, alias) for p, alias in paths[:2] if p.is_file()]
+        if not uploads:
+            log.info("sin cambios showcase: no hay PDF/MP4 de master que publicar")
     else:
         if not DECK_PDF_PATH.exists():
             log.error("%s no existe; corre render.py primero", DECK_PDF_PATH)
@@ -160,6 +195,14 @@ def main() -> None:
     if not rclone_conf:
         log.error("falta la variable de entorno RCLONE_CONF")
         sys.exit(1)
+
+    if args.target == "master" and os.environ.get("PORTFOLIO_V2_RELEASE") == "1":
+        try:
+            verified_master_release(uploads, rclone_conf, args.remote, os.environ.get("GITHUB_RUN_ID", "") + "-" + os.environ.get("GITHUB_RUN_ATTEMPT", "1"))
+        except (ValueError, subprocess.CalledProcessError) as exc:
+            log.error("Publicación master V2 bloqueada: %s", exc)
+            sys.exit(1)
+        return
 
     for local_path, dest in uploads:
         try:

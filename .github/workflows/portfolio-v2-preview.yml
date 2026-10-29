@@ -1,0 +1,38 @@
+name: Portfolio Editorial V2 Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+      - run: uv sync
+      - uses: actions/setup-node@v7
+      - run: npm install -g @marp-team/marp-cli
+      - name: Preparar ffmpeg
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg
+          fi
+      - name: Regresión
+        run: uv run python -m unittest discover -s tests -q
+      - name: Generar y validar PDF y vídeo narrado
+        run: uv run --with pymupdf python src/run_portfolio_v2.py --force
+      - name: Entregar vista previa aislada
+        uses: actions/upload-artifact@v4
+        with:
+          name: editorial-v2-preview
+          path: |
+            out/portfolio.pdf
+            out/portfolio.mp4
+            out/portfolio.srt
+            out/portfolio-v2-manifest.json
+          if-no-files-found: error
+          retention-days: 60

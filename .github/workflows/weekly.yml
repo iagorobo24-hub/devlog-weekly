@@ -118,26 +118,17 @@ jobs:
           uv run python src/collect.py --commit-state
           uv run python src/synthesize.py --commit-state
 
-      - name: Renderizar deck maestro
+      - name: Generar y validar Portfolio Editorial V2 (PDF + vídeo + subtítulos)
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
-        # Después de "Confirmar estado" a propósito: lee state/narrative/*.md,
-        # y ahí ya está la narrativa actualizada con lo de esta semana (antes
-        # de "Confirmar estado" seguiría siendo la de la semana pasada). Se
-        # salta solo si ningún repo showcase tuvo actividad.
-        run: uv run python src/render_master.py
-
-      - name: Renderizar vídeo del deck maestro
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
-        # Lee out/portfolio.md (lo acaba de escribir el paso anterior) y
-        # narra cada slide con edge-tts. Mismo umbral que render_master.py,
-        # así que se salta sola si ese paso también se saltó.
-        run: uv run python src/render_video.py
+        # Sólo se exponen las rutas de publicación una vez que pasa la validación de PDF y vídeo.
+        run: uv run --with pymupdf python src/run_portfolio_v2.py
 
       - name: Publicar deck maestro
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
-        # Sube out/portfolio.pdf y, si se generó, out/portfolio.mp4.
+        # Sube los resultados V2 ya verificados; sin actividad showcase se omite.
         run: uv run python src/publish.py --target master
         env:
+          PORTFOLIO_V2_RELEASE: '1'
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
           RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
