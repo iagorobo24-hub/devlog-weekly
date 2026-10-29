@@ -68,3 +68,10 @@ persistencia. La cronología histórica no depende de narrativas actuales.
 **PSM:** registro de cambio material para revisión posterior.
 No se actualiza `manifest.yaml` ni se afirma certificar la línea base
 antigua hasta ejecutar reconciliación y validación suficiente.
+
+### Archivo histórico duradero (29-10-2026)
+
+`src/publish_backfill.py` valida manifiesto y existencia de todos los
+archivos antes de publicar en ruta separada `Portfolio/historico-verificable/`.
+La subida es inmutable: no reemplaza los resultados del cron. Este cambio
+amplía el dominio `dom-publisher` sin cambiar la línea base auditada.

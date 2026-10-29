@@ -87,7 +87,7 @@ def master_video_remote_path(remote: str) -> str:
     return f"{remote}:Portfolio/master/portfolio.mp4"
 
 
-def upload(local_path: Path, dest: str, rclone_conf: str, remote: str) -> None:
+def upload(local_path: Path, dest: str, rclone_conf: str, remote: str, immutable: bool = False) -> None:
     rclone = shutil.which("rclone")
     if rclone is None:
         log.error("rclone no está instalado (ver https://rclone.org/install/)")
@@ -111,7 +111,11 @@ def upload(local_path: Path, dest: str, rclone_conf: str, remote: str) -> None:
             env[f"{prefix}_CLIENT_SECRET"] = own_client_secret
         else:
             log.warning("OAuth Drive propio no configurado; el client_id compartido de rclone dejará de funcionar en 2026")
-        subprocess.run([rclone, "--config", str(conf_path), "copyto", str(local_path), dest], check=True, env=env)
+        command = [rclone, "--config", str(conf_path)]
+        if immutable:
+            command.append("--immutable")
+        command.extend(["copyto", str(local_path), dest])
+        subprocess.run(command, check=True, env=env)
     finally:
         conf_path.unlink(missing_ok=True)
 

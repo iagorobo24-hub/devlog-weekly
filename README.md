@@ -215,3 +215,13 @@ aviso sobre la retirada del `client_id` compartido. El código acepta
 de Actions, sin exponer sus valores. Para activar la migración se necesita
 crear/autorizar ese cliente en la cuenta Google; el conector de GitHub
 no proporciona las credenciales ni permite escribir secretos de Actions.
+
+## Archivo histórico durable en Drive
+
+La reconstrucción crea primero un artefacto descargable de GitHub Actions.
+Tras validarlo, `src/publish_backfill.py` archiva los 8 PDF, sus 8 Markdown
+y el manifiesto en `Portfolio/historico-verificable/2026-W36__2026-W43/`.
+Se utiliza `rclone copyto --immutable` para impedir sustituir otros
+archivos. En particular NO se modifica `Portfolio/semanal/`,
+`Portfolio/master/` ni el estado persistido de los repositorios.
+Las credenciales OAuth siguen viniendo exclusivamente de Actions Secrets.
