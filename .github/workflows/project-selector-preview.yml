@@ -4,11 +4,6 @@ on:
   schedule:
     - cron: '30 6 * * MON'
   workflow_dispatch:
-  push:
-    branches:
-      - audit/functional-readiness-20261029
-    paths:
-      - docs/trigger-functional-readiness-20261029.md
 
 permissions:
   contents: read
