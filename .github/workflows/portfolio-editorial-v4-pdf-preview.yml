@@ -1,11 +1,6 @@
 name: Portfolio V4 Editorial PDF QA (not for publication)
 
 on:
-  push:
-    branches:
-      - audit/portfolio-v4-ci-sync-20261029
-    paths:
-      - docs/trigger-pdf-v4-ci-sync-20261029.md
   workflow_dispatch:
     inputs:
       source_run_id:
@@ -31,7 +26,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: project-selection-public-preview
-          run-id: 40960424270
+          run-id: ${{ inputs.source_run_id }}
           repository: ${{ github.repository }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: out
