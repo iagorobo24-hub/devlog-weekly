@@ -154,7 +154,10 @@ class ProjectSelectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "restricted"
             dest = root / "project-selection-private.json"
-            with patch.object(cli, "PRIVATE_DIR", root), patch.object(cli, "PRIVATE_OUT", dest):
+            # Simulate the explicitly authorized local environment for this filesystem-only test.
+            # Production's CI ban remains unchanged and is tested separately.
+            with patch.object(cli, "PRIVATE_DIR", root), patch.object(cli, "PRIVATE_OUT", dest), \
+                 patch.dict("os.environ", {"CI": "", "GITHUB_ACTIONS": ""}):
                 report = core.build_selection(
                     [repo("secret", [commit(1, 1, "feat: prototype")], "private")],
                     config(), now=NOW, visibility="private-local")
