@@ -62,8 +62,8 @@ perder la ventana ni duplicar narrativa.
 | Deck semanal (Marp → PDF) | ✅ | Generado y publicado en la ejecución W44. |
 | Deck maestro y vídeo narrado | ✅ | PDF y MP4 publicados en W44; faltan tests específicos. |
 | Publicación en Drive con rclone | 🟡 | W44 e histórico publicados; pendiente sustituir el cliente compartido por OAuth propio (#1). |
-| Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. La generación histórica de semanas individuales no está reconstruida. |
-| Tests automáticos | ✅ | 5 tests de regresión ejecutados con éxito en GitHub Actions el 29-10-2026. Cobertura todavía parcial. |
+| Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. Las semanas W36–W43 se reconstruyeron y archivaron, preservando sus eventos originales. |
+| Tests automáticos | ✅ | 25 pruebas de regresión aprobadas en CI, con vistas previas de PDF y una prueba aislada de NVIDIA. Cobertura todavía parcial. |
 
 ✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. El flujo W44 y los tests están verificados; la cobertura sigue siendo parcial.
 
@@ -126,7 +126,7 @@ Los secretos van en variables de entorno o en los secretos de Actions, nunca en 
 
 ## Límites conocidos
 
-- **Cobertura de tests limitada.** Hay 5 pruebas de regresión y un job CI obligatorio, pero faltan tests de integración para renderizado, límites de tasa, Drive y modelos externos.
+- **Cobertura de tests limitada.** Hay 25 pruebas de regresión y un job CI obligatorio, pero faltan tests de integración para renderizado, límites de tasa, Drive y modelos externos.
 - **El texto lo escribe un modelo y nadie lo revisa.** Las narrativas y los titulares pueden contener errores o
   valoraciones no respaldadas por los commits. Revísalos antes de enseñarlos o publicarlos.
 - **Qué sale de tu máquina.** Al sintetizar se envían a NVIDIA NIM el título de los commits, issues y PRs, los tags y
@@ -185,7 +185,7 @@ docs/               gráficos del README y mapa del sistema (PSM)
 - **Reprocesamiento:** el cursor se actualizó en `e2b0ae8` (29-10-2026). El informe W44 agrega lo pendiente desde agosto. El archivo W36 (parcial) a W43 se genera en un workflow independiente con metadatos fechados, sin modificar `state/` ni Drive.
 - **Pruebas:** `uv run python -m unittest discover -s tests -v`.
 
-La ejecución de GitHub Actions programada para los lunes sigue habilitada. La primera incorporación de esta reparación dispara también una ejecución por `push`, condicionada a superar los tests. Comprueba el resultado en Actions antes de dar por operativo el sistema.
+La ejecución de GitHub Actions programada para los lunes sigue habilitada. Los cambios de código disparan únicamente CI; publicar el devlog semanal sigue reservado al cron de los lunes o al disparo manual. La vista previa no modifica el estado ni Drive.
 
 ## Histórico verificable (sin reescritura)
 
