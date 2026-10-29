@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '30 6 * * MON'
   workflow_dispatch:
+  push:
+    branches:
+      - audit/portfolio-v4-ci-sync-20261029
+    paths:
+      - docs/audit-portfolio-v4-ci-sync-20261029.md
 
 permissions:
   contents: read
