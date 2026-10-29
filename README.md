@@ -175,3 +175,14 @@ docs/               gráficos del README y mapa del sistema (PSM)
 <sub>Proyecto personal. Las narrativas generadas por IA no están verificadas: revísalas antes de usarlas.</sub>
 
 </div>
+
+## Operación y recuperación (octubre de 2026)
+
+- **Origen público:** el workflow usa `GITHUB_TOKEN` de GitHub Actions para leer exclusivamente los cuatro repos de `config/repos.yml`. El secreto `GH_PAT` anterior no se utiliza en Actions.
+- **Fallos visibles:** errores de acceso a cualquier repo y síntesis incompleta terminan el job con error, sin publicar ni avanzar `state/`. El job `tests` es requisito del pipeline.
+- **NVIDIA NIM:** la cadena antigua expiró el 26-08-2026. La nueva cadena utiliza candidatos documentados en el catálogo; su disponibilidad y permiso para esta cuenta deben confirmarse en una ejecución real. Puede configurarse `NIM_MODEL` en el entorno de ejecución para fijar un modelo probado.
+- **Drive:** `RCLONE_CONF` sigue siendo necesario. Se admiten los secretos opcionales `RCLONE_DRIVE_CLIENT_ID` y `RCLONE_DRIVE_CLIENT_SECRET` para usar OAuth propio, sin publicar los valores. Hasta configurarlos, la publicación dependerá del cliente compartido que rclone retirará en 2026.
+- **Reprocesamiento:** el último cursor efectivo sigue en 2026-08-31. El primer run válido hará *catch-up* de la actividad de los repos públicos desde esa fecha, agrupada en un único informe; **no** restituye automáticamente un PDF independiente por semana. No reiniciar ni modificar manualmente el estado sin cotejar los históricos.
+- **Pruebas:** `uv run python -m unittest discover -s tests -v`.
+
+La ejecución de GitHub Actions programada para los lunes sigue habilitada. La primera incorporación de esta reparación dispara también una ejecución por `push`, condicionada a superar los tests. Comprueba el resultado en Actions antes de dar por operativo el sistema.

@@ -183,8 +183,12 @@ def collect_repo(gh: Github, repo_name: str, repo_cfg: dict, since: datetime, un
     try:
         repo = gh.get_repo(repo_name)
     except GithubException as e:
-        log.error("no se pudo acceder a %s: %s", repo_name, e)
-        return None
+        # Fallo crítico: no continuar como si el repositorio no tuviera actividad.
+        raise RuntimeError(f"no se pudo acceder a {repo_name}: {e}") from e
+
+    # La salida se publica en un proyecto público. Nunca incluir repos privados.
+    if repo.private:
+        raise RuntimeError(f"repositorio privado bloqueado para publicación pública: {repo_name}")
 
     commits, commits_raw = collect_commits(repo, since, until)
     diff_stats = collect_diff_stats(repo, commits_raw)
@@ -246,9 +250,9 @@ def main() -> None:
         commit_state()
         return
 
-    token = os.environ.get("GH_PAT")
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_PAT")
     if not token:
-        log.error("falta la variable de entorno GH_PAT")
+        log.error("falta GITHUB_TOKEN (o GH_PAT para ejecución local)")
         sys.exit(1)
 
     config = load_repos_config()
@@ -273,6 +277,9 @@ def main() -> None:
         data = collect_repo(gh, repo_name, repo_cfg, since, now, previously_seen_tags)
         if data is not None:
             results.append(data)
+
+    if len(results) != len(repos_cfg):
+        raise RuntimeError(f"recolección incompleta: {len(results)}/{len(repos_cfg)} repositorios")
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     output = {"generated_at": now.isoformat(), "repos": results}

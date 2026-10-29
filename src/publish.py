@@ -87,7 +87,7 @@ def master_video_remote_path(remote: str) -> str:
     return f"{remote}:Portfolio/master/portfolio.mp4"
 
 
-def upload(local_path: Path, dest: str, rclone_conf: str) -> None:
+def upload(local_path: Path, dest: str, rclone_conf: str, remote: str) -> None:
     rclone = shutil.which("rclone")
     if rclone is None:
         log.error("rclone no está instalado (ver https://rclone.org/install/)")
@@ -100,7 +100,18 @@ def upload(local_path: Path, dest: str, rclone_conf: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(rclone_conf)
-        subprocess.run([rclone, "--config", str(conf_path), "copyto", str(local_path), dest], check=True)
+        # Permite migrar a OAuth propio sin reescribir RCLONE_CONF ni exponer
+        # client_secret en los argumentos visibles del proceso.
+        env = os.environ.copy()
+        own_client_id = env.get("RCLONE_DRIVE_CLIENT_ID", "")
+        own_client_secret = env.get("RCLONE_DRIVE_CLIENT_SECRET", "")
+        if own_client_id and own_client_secret:
+            prefix = f"RCLONE_CONFIG_{remote.upper().replace('-', '_')}"
+            env[f"{prefix}_CLIENT_ID"] = own_client_id
+            env[f"{prefix}_CLIENT_SECRET"] = own_client_secret
+        else:
+            log.warning("OAuth Drive propio no configurado; el client_id compartido de rclone dejará de funcionar en 2026")
+        subprocess.run([rclone, "--config", str(conf_path), "copyto", str(local_path), dest], check=True, env=env)
     finally:
         conf_path.unlink(missing_ok=True)
 
@@ -148,7 +159,7 @@ def main() -> None:
 
     for local_path, dest in uploads:
         try:
-            upload(local_path, dest, rclone_conf)
+            upload(local_path, dest, rclone_conf, args.remote)
         except subprocess.CalledProcessError as e:
             log.error("rclone falló subiendo a %s (código %d)", dest, e.returncode)
             sys.exit(1)

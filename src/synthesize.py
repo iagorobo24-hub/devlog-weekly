@@ -60,13 +60,13 @@ OUT_PATH = ROOT / "out" / "summaries.json"
 
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
-# Orden por calidad real observada comparando salidas en GestionaB2B, no por
-# tamaño. Todos confirmados accesibles con una cuenta NIM gratuita normal.
+# Candidatos del catálogo NVIDIA NIM; la disponibilidad para la cuenta
+# se confirma con cada ejecución. Los modelos anteriores expiraron en 2026.
+# NIM_MODEL permite forzar un modelo validado desde el entorno.
 FALLBACK_MODELS = [
-    "nvidia/llama-3.3-nemotron-super-49b-v1",
-    "meta/llama-3.3-70b-instruct",
-    "meta/llama-3.1-70b-instruct",
-    "meta/llama-3.1-8b-instruct",
+    "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    "openai/gpt-oss-20b",
+    "nvidia/nvidia-nemotron-nano-9b-v2",
 ]
 ATTEMPTS_PER_MODEL = 2
 RETRY_DELAY_SECONDS = 3
@@ -269,6 +269,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def ensure_complete_summaries(repos: list[dict], summaries: list[dict]) -> None:
+    """No publicar ni confirmar estado si una síntesis necesaria falló."""
+    expected = {repo["name"] for repo in repos}
+    actual = {summary["name"] for summary in summaries}
+    missing = expected - actual
+    if missing or len(summaries) != len(repos):
+        raise RuntimeError(f"síntesis incompleta; faltan {sorted(missing)}")
+
+
 def main() -> None:
     args = parse_args()
 
@@ -316,6 +325,7 @@ def main() -> None:
         log.info("dry-run: %d prompt(s) generado(s), nada escrito", len(repos))
         return
 
+    ensure_complete_summaries(repos, results)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     output = {"generated_at": collected["generated_at"], "repos": results}
     OUT_PATH.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
