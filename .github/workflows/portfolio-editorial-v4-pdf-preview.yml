@@ -1,11 +1,6 @@
 name: Portfolio V4 Editorial PDF QA (not for publication)
 
 on:
-  push:
-    branches:
-      - audit/portfolio-v4-pdf-qa-20261029
-    paths:
-      - docs/trigger-portfolio-v4-pdf-20261029.md
   workflow_dispatch:
     inputs:
       source_run_id:
@@ -31,7 +26,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: project-selection-public-preview
-          run-id: 40948183036
+          run-id: ${{ inputs.source_run_id }}
           repository: ${{ github.repository }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: out
@@ -49,7 +44,6 @@ jobs:
       - name: Validate PDF page count, content, geometry and citations
         run: uv run --with pymupdf python -m src.verify_editorial_review_pdf
       - name: Upload isolated preview and machine QA
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: portfolio-v4-editorial-pdf-qa
