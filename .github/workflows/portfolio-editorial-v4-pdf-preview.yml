@@ -47,6 +47,7 @@ jobs:
       - name: Validate PDF page count, content, geometry and citations
         run: uv run --with pymupdf python -m src.verify_editorial_review_pdf
       - name: Upload isolated preview and machine QA
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: portfolio-v4-editorial-pdf-qa
