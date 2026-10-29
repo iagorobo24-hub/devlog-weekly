@@ -32,8 +32,8 @@ Corre en GitHub Actions y sube los resultados a Google Drive.
 | 📥 **Recoge** | Por cada repo de `config/repos.yml`: commits, estadísticas de diff, issues y PRs cerrados, tags nuevos, lenguajes y el arranque del README. Sin IA. |
 | 🧠 **Resume** | Una llamada al modelo por repo con actividad, con el historial ya contado para que escriba *qué cambió* y no *qué es el proyecto*. |
 | 📄 **Deck semanal** | Plantilla fija (Jinja2 + Marp) con el texto del modelo: un PDF con los avances de la semana. |
-| 🗂️ **Deck maestro** | Un portfolio permanente con una slide por repo marcado como `showcase`, a partir de su narrativa acumulada. |
-| 🎙️ **Vídeo narrado** | Las slides del deck maestro con voz sintética (edge-tts) unidas con ffmpeg en un `.mp4`. |
+| 🗂️ **Deck maestro** | Portfolio editorial V2 con casos de estudio, capturas, estado verificable y enlaces de evidencia por proyecto. |
+| 🎙️ **Vídeo narrado** | Guiones por diapositiva, voz edge-tts y montaje FFmpeg con subtítulos SRT. |
 | ☁️ **Publica** | Sube los PDF y el vídeo a Google Drive con `rclone`, en carpetas por semana ISO. |
 
 Pensado para quien mantiene varios repositorios y quiere un registro semanal y un portfolio al día sin
@@ -60,10 +60,10 @@ perder la ventana ni duplicar narrativa.
 | Recolección desde la API de GitHub | ✅ | Verificado 4/4 repos en W44; fallos de autorización y privacidad bloqueantes. |
 | Síntesis con LLM (cadena de modelos de NVIDIA NIM) | 🟡 | Implementada. Solo se comprueba que la respuesta traiga las cuatro claves esperadas; no se valida el contenido. |
 | Deck semanal (Marp → PDF) | ✅ | Generado y publicado en la ejecución W44. |
-| Deck maestro y vídeo narrado | ✅ | PDF y MP4 publicados en W44; faltan tests específicos. |
+| Deck maestro y vídeo narrado | ✅ | V2 editorial con PDF/MP4/SRT validados en vista previa; publicación final en Drive se comprueba por separado. |
 | Publicación en Drive con rclone | 🟡 | W44 e histórico publicados; pendiente sustituir el cliente compartido por OAuth propio (#1). |
 | Workflow semanal en GitHub Actions | 🟡 | Definido (lunes 07:00 UTC y disparo manual). El pipeline se recuperó el 29-10-2026: ejecución real W44 con 4/4 repos sintetizados, publicación de PDF semanal, PDF maestro y vídeo, y commit de estado en main. Las semanas W36–W43 se reconstruyeron y archivaron, preservando sus eventos originales. |
-| Tests automáticos | ✅ | 25 pruebas de regresión aprobadas en CI, con vistas previas de PDF y una prueba aislada de NVIDIA. Cobertura todavía parcial. |
+| Tests automáticos | ✅ | 53 pruebas de regresión y controles CI de PDF, enlaces, imágenes y vídeo. Cobertura externa parcial. |
 
 ✅ probado · 🟡 implementado, pendiente de validar · 🚧 en construcción. El flujo W44 y los tests están verificados; la cobertura sigue siendo parcial.
 
@@ -89,9 +89,9 @@ Para ejecutarlo de verdad, define `NVIDIA_API_KEY` y quita `--dry-run`.
 uv run python src/synthesize.py                 # out/summaries.json (--repo NOMBRE, --model ID, --no-state)
 uv run python src/render.py --no-pdf            # solo out/deck.md; sin --no-pdf genera out/deck.pdf con Marp
 uv run python src/publish.py --dry-run          # muestra el destino en Drive sin subir nada
-uv run python src/render_master.py --force      # deck maestro ignorando el umbral (--no-pdf para solo Markdown)
-uv run python src/render_video.py --force       # vídeo narrado (--voice es-ES-AlvaroNeural por defecto)
-uv run python src/publish.py --target master    # sube portfolio.pdf y portfolio.mp4 si existen
+uv run --with pymupdf python src/run_portfolio_v2.py --force  # generación editorial V2 sin Drive
+uv run python src/render_video_v2.py --smoke-tone  # montaje aislado sin servicio TTS
+uv run python src/publish.py --target master  # publicación versionada en modo V2
 ```
 
 Los comandos `--commit-state` (`collect.py` y `synthesize.py`) confirman el estado a partir de `out/`; en el workflow
@@ -126,7 +126,7 @@ Los secretos van en variables de entorno o en los secretos de Actions, nunca en 
 
 ## Límites conocidos
 
-- **Cobertura de tests limitada.** Hay 25 pruebas de regresión y un job CI obligatorio, pero faltan tests de integración para renderizado, límites de tasa, Drive y modelos externos.
+- **Cobertura de tests:** 53 pruebas de regresión, además de validación PDF, imágenes y vídeo; CI de proyectos origen y Drive requieren evidencias de cada ejecución.
 - **El texto lo escribe un modelo y nadie lo revisa.** Las narrativas y los titulares pueden contener errores o
   valoraciones no respaldadas por los commits. Revísalos antes de enseñarlos o publicarlos.
 - **Qué sale de tu máquina.** Al sintetizar se envían a NVIDIA NIM el título de los commits, issues y PRs, los tags y
@@ -149,10 +149,10 @@ src/
   collect.py        GitHub API -> out/collected.json (sin IA)
   synthesize.py     JSON + historial -> out/summaries.json (llamada al LLM)
   render.py         summaries -> out/deck.md -> out/deck.pdf (Marp)
-  render_master.py  narrativas de los repos showcase -> out/portfolio.pdf
-  render_video.py   portfolio -> out/portfolio.mp4 (edge-tts + ffmpeg)
+  render_portfolio_v2.py  fichas auditadas -> out/portfolio-v2.pdf
+  render_video_v2.py  guiones -> MP4 y SRT
   publish.py        PDF / vídeo -> Google Drive (rclone)
-templates/          deck.md.j2, portfolio.md.j2 y tema theme.css
+templates/          deck.md.j2 y theme.css (semanal); portfolio_v2.md.j2 y portfolio.css (editorial)
 config/repos.yml    repos a seguir
 state/              last_run.json y narrative/*.md, versionados por el workflow
 .github/workflows/  weekly.yml (cron semanal, disparo manual y validación por push)
