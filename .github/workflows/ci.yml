@@ -17,6 +17,12 @@ on:
       - 'config/**'
       - '.github/workflows/**'
   workflow_dispatch:
+    inputs:
+      prueba_modelo:
+        description: 'Prueba aislada de NVIDIA con repos públicos, sin publicar'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -56,3 +62,27 @@ jobs:
             out/deck.pdf
           if-no-files-found: error
           retention-days: 30
+
+  llm_probe:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.prueba_modelo == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+      - run: uv sync
+      - name: Recoger metadatos públicos para la prueba
+        env:
+          GITHUB_${{ github.event_name == 'workflow_dispatch' && inputs.prueba_modelo == true }}: GH_${{ github.event_name == 'workflow_dispatch' && inputs.prueba_modelo == true }}
+        run: uv run python src/collect.py --since 2026-10-12T00:00:00+00:00
+      - name: Síntesis con NIM sin actualizar narrativa ni publicar
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: uv run python src/synthesize.py --no-state
+      - uses: actions/upload-artifact@v4
+        with:
+          name: devlog-quality-real-model-probe
+          path: out/summaries.json
+          if-no-files-found: error
+          retention-days: 14
