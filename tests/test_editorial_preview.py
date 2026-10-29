@@ -39,6 +39,26 @@ class EditorialPreviewTests(unittest.TestCase):
         self.assertNotIn("<script>", result)
         self.assertIn("&lt;script&gt;", result)
 
+    def test_feature_tip_ci_not_promoted_to_main(self):
+        row=self.s["proposed_slate"][0]
+        row.update({
+            "unmerged_code_7d":2,"unmerged_tests_7d":1,
+            "branch_scan_complete":True,
+            "feature_branch_ci":[{
+                "branch":"feature/b","tip_sha":"a"*40,
+                "status":"all_observed_runs_successful",
+                "observed_workflow_count":2,
+                "sample_run_urls":[
+                    "https://github.com/owner/foo/actions/runs/123"],
+                "not_main_or_runtime_evidence":True,
+            }],
+        })
+        report=render(self.s,self.d)
+        self.assertIn("Ejecuciones CI en puntas", report)
+        self.assertIn("feature/b", report)
+        self.assertIn("https://github.com/owner/foo/actions/runs/123",report)
+        self.assertIn("independientes de main",report)
+
     def test_rejects_private_injections(self):
         self.s["proposed_slate"][0]["visibility"]="private"
         with self.assertRaisesRegex(ValueError,"privado"):

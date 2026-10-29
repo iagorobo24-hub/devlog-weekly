@@ -91,6 +91,33 @@ class ComparisonSlidesTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ajena"):
             self.build()
 
+    def test_feature_tip_ci_is_not_main_ci_and_links_are_pinned(self):
+        self.report["candidates"][0]["unmerged_commit_samples"] = [{
+            "sha": SHA, "kind": "code", "subject": "feat: event",
+            "url": f"https://github.com/{REPO}/commit/{SHA}",
+            "commit_subject_only": True,
+            "not_merged_or_functionally_verified": True,
+        }]
+        feature_run=f"https://github.com/{REPO}/actions/runs/12345"
+        self.report["candidates"][0]["feature_branch_ci"]=[{
+            "branch":"feature/a", "tip_sha":SHA,
+            "status":"all_observed_runs_successful",
+            "observed_workflow_count":1,
+            "sample_run_urls":[feature_run],
+            "not_main_or_runtime_evidence":True,
+        }]
+        slides=self.build()
+        markup=next(x["markup"] for x in slides
+                    if x["kind"]=="review-branch-evidence")
+        self.assertIn(feature_run,markup)
+        self.assertIn("no main",markup)
+        self.assertFalse(self.report["candidates"][0]["approved_for_release"])
+        self.report["candidates"][0]["feature_branch_ci"][0]["sample_run_urls"]=[
+            "https://attacker.example/actions/runs/12345"
+        ]
+        with self.assertRaisesRegex(ValueError,"ajeno"):
+            self.build()
+
     def test_ci_link_separates_execution_from_workflow_file(self):
         url = f"https://github.com/{REPO}/actions/runs/98765"
         self.report["candidates"][0]["ci_run_url_at_head"] = url

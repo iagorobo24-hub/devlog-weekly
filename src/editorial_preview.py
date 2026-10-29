@@ -79,6 +79,26 @@ def render(strategy: dict, drafts: dict) -> str:
                 "completa" if row.get("branch_scan_complete") else "parcial",
             )) + " |")
         content += [
+            "", "### Ejecuciones CI en puntas de ramas, independientes de main", "",
+            "Se muestran únicamente las ejecuciones de workflow devueltas por GitHub",
+            "para el SHA exacto. No se acredita cobertura completa de workflows,",
+            "funcionamiento real ni éxito de la rama predeterminada.", "",
+            "| Proyecto | Rama | Workflow observados | Estado de ejecución |",
+            "|---|---|---:|---|",
+        ]
+        for row in feature_items + branch_only:
+            for check in row.get("feature_branch_ci", []):
+                label = clean(check["status"])
+                urls = check.get("sample_run_urls", [])
+                links = ", ".join(
+                    f"[ejecución {i+1}]({url})"
+                    for i, url in enumerate(urls))
+                content.append("| " + " | ".join((
+                    clean(row["title"]), clean(check["branch"]),
+                    str(check["observed_workflow_count"]),
+                    label + ("; " + links if links else ""),
+                )) + " |")
+        content += [
             "", "### Muestras de commits públicos, no evidencia de ejecución", "",
             "Son asuntos declarados en GitHub, no funcionalidades aceptadas.",
             "Cada enlace señala el SHA concreto, sin asumir integración en main.",

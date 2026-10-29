@@ -42,6 +42,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: uv run python -m src.public_branch_activity
+      - name: Comprobar ejecuciones públicas por SHA exacto de ramas
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run python -m src.public_branch_ci_audit
       - name: Contrastar rutas modificadas por commits públicos fijados
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -72,6 +76,7 @@ jobs:
           path: |
             out/project-selection-public.json
             out/project-branch-activity-public.json
+            out/project-branch-ci-public.json
             out/project-commit-diff-audit-public.json
             out/project-selection-review.json
             out/project-quality-public.json

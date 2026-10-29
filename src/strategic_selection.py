@@ -26,6 +26,7 @@ DRAFTS = ROOT / "out/candidate-profiles-review.json"
 OUTPUT = ROOT / "out/project-strategy-public.json"
 BRANCHES = ROOT / "out/project-branch-activity-public.json"
 COMMIT_DIFFS = ROOT / "out/project-commit-diff-audit-public.json"
+BRANCH_CI = ROOT / "out/project-branch-ci-public.json"
 
 # Readiness for presentation is NOT a binary consequence of CI.
 def classify(*, strategic_priority: int | None, ci_status: str, has_test_path: bool,
@@ -210,9 +211,87 @@ def enrich_branch_signal(signal: dict, name: str, diffs: dict) -> dict:
     return {**signal, "branch_commit_samples": combined}
 
 
+def ci_map_for_branches(selection: dict, branches: dict | None,
+                        report: dict | None) -> dict:
+    """Pinned feature-tip workflow runs; never substitute CI evidence for main."""
+    if report is None:
+        return {}
+    if (branches is None or report.get("schema") != 1
+            or report.get("visibility") != "public"
+            or report.get("private_inputs_accessed") is not False
+            or report.get("automatic_publication") is not False
+            or report.get("does_not_verify_all_workflows_or_runtime") is not True
+            or report.get("source_branch_generated_at") != branches.get("generated_at")
+            or report.get("source_selection_generated_at") != selection.get("generated_at")):
+        raise ValueError("Branch CI report unsafe or out of sync")
+    expected = {x["repo"]: x for x in branches.get("repos", [])}
+    found = {}
+    for row in report.get("repos", []):
+        if not isinstance(row, dict) or row.get("visibility") != "public":
+            raise ValueError("Private branch CI record")
+        name = row.get("repo")
+        if name not in expected or name in found:
+            raise ValueError("Duplicate or foreign branch CI repository")
+        checks = row.get("branches")
+        if not isinstance(checks, list) or len(checks) > 5:
+            raise ValueError("Unbounded branch CI checks")
+        expected_tips = {
+            (x["branch"], x["tip"]) for x in expected[name].get("sample_branches", [])
+        }
+        observed_tips = set()
+        sanitized = []
+        for item in checks:
+            if not isinstance(item, dict) or item.get("visibility") != "public":
+                raise ValueError("Private feature CI check")
+            tip = (item.get("branch"), item.get("tip_sha"))
+            if tip not in expected_tips or tip in observed_tips:
+                raise ValueError("Unpinned or duplicate feature CI tip")
+            observed_tips.add(tip)
+            status = item.get("status")
+            if status not in ("unavailable", "no_runs_found", "incomplete",
+                              "observed_failure_or_cancelled",
+                              "pending_or_inconclusive", "all_observed_runs_successful"):
+                raise ValueError("Invalid feature CI status")
+            runs = item.get("workflow_runs")
+            if not isinstance(runs, list) or len(runs) > 20:
+                raise ValueError("Unbounded feature CI runs")
+            ids = set()
+            for run in runs:
+                rid = run.get("run_id") if isinstance(run, dict) else None
+                if (type(rid) is not int or rid < 1 or rid in ids
+                        or run.get("head_sha") != item["tip_sha"]
+                        or run.get("url") !=
+                            f"https://github.com/{name}/actions/runs/{rid}"
+                        or run.get("not_runtime_evidence") is not True):
+                    raise ValueError("Foreign or fabricated feature CI run")
+                ids.add(rid)
+            if status == "all_observed_runs_successful" and (
+                    not runs or item.get("scan_complete") is not True
+                    or item.get("all_returned_runs_succeeded") is not True
+                    or any(x.get("status") != "completed"
+                           or x.get("conclusion") != "success" for x in runs)):
+                raise ValueError("Feature CI success unsupported by run evidence")
+            if item.get("all_returned_runs_succeeded") is True and (
+                    status != "all_observed_runs_successful"):
+                raise ValueError("Contradictory feature CI success")
+            sanitized.append({
+                "branch": item["branch"], "tip_sha": item["tip_sha"],
+                "status": status, "observed_workflow_count": len(runs),
+                "sample_run_urls": [x["url"] for x in runs[:3]],
+                "not_main_or_runtime_evidence": True,
+            })
+        if row.get("branch_tips_checked") != len(checks):
+            raise ValueError("Branch CI count inconsistent")
+        found[name] = sanitized
+    if set(found) != set(expected):
+        raise ValueError("Branch CI repository coverage incomplete")
+    return found
+
+
 def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
                  *, branch_report: dict | None = None,
-                 diff_report: dict | None = None) -> dict:
+                 diff_report: dict | None = None,
+                 branch_ci_report: dict | None = None) -> dict:
     configured_projects(config)
     if any(obj.get("visibility") != "public" for obj in (selection, quality, drafts)):
         raise ValueError("Datos privados rechazados de selección pública")
@@ -243,6 +322,7 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
                   for repo in p["repos"]}
     branch_rows = branch_map_for_selection(selection, branch_report)
     diffs = diff_index(selection, branch_report, diff_report)
+    branch_ci = ci_map_for_branches(selection, branch_report, branch_ci_report)
     result = []
     seen_repos = set()
     for section, candidate in candidates:
@@ -279,6 +359,8 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
                 reasons.append("Auditoría de ramas incompleta; recuento como mínimo observado")
             result.append({
                 **branch_evidence,
+                "feature_branch_ci": ([] if branch_evidence["branch_evidence_status"] == "default_head_changed" else branch_ci.get(repo, [])),
+                "feature_ci_cannot_prove_default_or_runtime": True,
                 "repo": repo, "title": candidate["title"],
                 "selection_bucket": section,
                 "visibility": "public", "strategic_priority": priority,
@@ -317,6 +399,8 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
                     branch_evidence["unmerged_code_7d"] + branch_evidence["unmerged_tests_7d"] > 0):
                 branch_only_watchlist.append({
                     **branch_evidence, "repo": repo, "title": candidate["title"],
+                    "feature_branch_ci": ([] if branch_evidence["branch_evidence_status"] == "default_head_changed" else branch_ci.get(repo, [])),
+                    "feature_ci_cannot_prove_default_or_runtime": True,
                     "visibility": "public", "default_branch_inactive": True,
                     "not_ready_for_publication": True, "publishable": False,
                 })
@@ -324,6 +408,8 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
                 continue
             historical.append({
                 **branch_evidence,
+                "feature_branch_ci": ([] if branch_evidence["branch_evidence_status"] == "default_head_changed" else branch_ci.get(repo, [])),
+                "feature_ci_cannot_prove_default_or_runtime": True,
                 "repo": repo, "title": candidate["title"],
                 "visibility": "public", "strategic_priority": priority,
                 "priority_basis": "proposed_public_config_not_owner_confirmed",
@@ -351,6 +437,8 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
         "branch_work_does_not_prove_main_or_ci": True,
         "branch_activity_checked": branch_report is not None,
         "public_commit_path_categories_checked": diff_report is not None,
+        "feature_tip_ci_checked": branch_ci_report is not None,
+        "feature_tip_ci_never_proves_main_or_runtime": True,
         "file_path_categories_do_not_prove_functionality_or_test_runs": True,
         "branch_selection_generated_at": (
             branch_report["source_selection_generated_at"] if branch_report else None),
@@ -367,8 +455,10 @@ def main() -> None:
     cfg = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
     branch_report = json.loads(BRANCHES.read_text(encoding="utf-8"))
     diff_report = json.loads(COMMIT_DIFFS.read_text(encoding="utf-8"))
+    branch_ci_report = json.loads(BRANCH_CI.read_text(encoding="utf-8"))
     result = build_public(selection, quality, drafts, cfg,
-                          branch_report=branch_report, diff_report=diff_report)
+                          branch_report=branch_report, diff_report=diff_report,
+                          branch_ci_report=branch_ci_report)
     OUTPUT.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{len(result['proposed_slate'])} candidatos públicos clasificados por preparación editorial; "
           "no se cambia el portfolio.")

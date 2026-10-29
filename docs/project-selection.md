@@ -332,3 +332,25 @@ muestras tenían rutas acordes a su categoría declarada y una muestra
 categorizada test no tenía ninguna ruta reconocida como tests. Es una
 heurística de rutas, no un juicio sobre calidad del commit o éxito de QA.
 Nada de esta fase aprueba o publica automáticamente una ficha o PDF.
+
+## CI pública de ramas por SHA, separada de main
+
+La revisión editorial ejecuta public_branch_ci_audit después del barrido de
+ramas. Consulta únicamente las puntas SHA de hasta cinco ramas públicas con
+commits de código o tests no fusionados recientes. Comprueba el carácter
+público de cada repositorio antes de inspeccionar ejecuciones y acota a 20
+runs por punta. Cada workflow observado conserva su URL, estado, conclusión
+y el SHA exacto. Ningún resultado de la rama se equipara a CI de main.
+
+Los estados posibles distinguen ejecuciones exitosas observadas, fallos,
+cancelaciones, pendientes, ausencia de runs, cobertura truncada y error de
+consulta. Una colección de runs verdes no demuestra que todos los workflows
+relevantes se ejecutaran ni que las funcionalidades se hayan probado en el
+entorno real. La capa estratégica comprueba la misma instantánea de selección
+y de ramas, y rechaza SHA, repositorios, URLs y resultados inconsistentes.
+
+En la revisión pública del 29/10/2026 de GuiaIA se encontraron cinco puntas
+de ramas con un total de 16 ejecuciones de workflow devueltas por GitHub,
+todas completadas con éxito. Esto no implica despliegue, juego validado en
+Minecraft ni CI correcta en main. Para el portfolio definitivo siguen
+pendientes las pruebas funcionales, capturas autorizadas y aprobación editorial.

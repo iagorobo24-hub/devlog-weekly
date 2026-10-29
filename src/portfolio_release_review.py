@@ -211,6 +211,8 @@ def build_review(selection: dict, quality: dict, strategy: dict,
             "unmerged_code_7d": s.get("unmerged_code_7d", 0),
             "unmerged_tests_7d": s.get("unmerged_tests_7d", 0),
             "unmerged_commit_samples": s.get("branch_commit_samples", []),
+            "feature_branch_ci": s.get("feature_branch_ci", []),
+            "feature_ci_cannot_prove_default_or_runtime": True,
             "branch_activity_is_not_main_evidence": True,
             "blockers": blockers, "approved_for_release": False,
         })

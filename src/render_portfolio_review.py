@@ -65,6 +65,22 @@ def _verified_inputs(report: dict, profiles: dict) -> tuple[list, dict]:
                     or sample.get("not_merged_or_functionally_verified") is not True
                     or not isinstance(sample.get("subject"), str)):
                 raise ValueError("Muestra de commits ajena o no versionada")
+        ci_checks = candidate.get("feature_branch_ci", [])
+        if not isinstance(ci_checks, list) or len(ci_checks) > 5:
+            raise ValueError("CI de ramas sin límite")
+        for check in ci_checks:
+            tip = check.get("tip_sha") if isinstance(check, dict) else None
+            if not isinstance(tip, str) or not SHA_RE.fullmatch(tip):
+                raise ValueError("SHA de CI de ramas inválido")
+            urls = check.get("sample_run_urls")
+            if not isinstance(urls, list) or len(urls) > 3:
+                raise ValueError("Enlaces CI de ramas inválidos")
+            prefix = f"https://github.com/{candidate['repo']}/actions/runs/"
+            if any(not isinstance(url, str) or not url.startswith(prefix)
+                   or not url[len(prefix):].isdigit() for url in urls):
+                raise ValueError("Enlace CI ajeno al repositorio público")
+            if check.get("not_main_or_runtime_evidence") is not True:
+                raise ValueError("CI de ramas confunde main o ejecución")
         seen.add(candidate["repo"])
     return candidates, available
 
@@ -165,6 +181,13 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
             if sample.get("declared_kind_has_corresponding_path") is True:
                 return "Rutas compatibles identificadas; ejecución NO verificada"
             return "No se identificaron rutas compatibles con el asunto"
+        checks = c.get("feature_branch_ci", [])
+        feature_links = "".join(
+            '<a href="' + esc(check["sample_run_urls"][0]) + '">'
+            + esc(check["branch"][:48]) + ': ' + esc(check["status"]) +
+            ' (' + str(check["observed_workflow_count"]) + ' ejecuciones observadas)</a>'
+            for check in checks[:2] if check.get("sample_run_urls")
+        )
         evidence_links = "".join(
             '<a class="pf-evidence" href="' + esc(sample["url"]) + '">'
             '<strong>ASUNTO DECLARADO: ' + ('CÓDIGO' if sample["kind"] == "code" else 'TEST') + '</strong>'
@@ -180,7 +203,9 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
             '<p class="pf-lead">Muestra de commits públicos pendientes de integración: '
             'sus asuntos no acreditan pruebas exitosas ni funciones operativas.</p>'
             '<div class="pf-evidence-list">' + evidence_links + '</div>'
-            '<p class="pf-bottom-note">SHA inmutables y recuentos separados de la CI de main. '
+            '<p class="pf-limit">CI de puntas de ramas (no main): ' +
+            (feature_links if feature_links else 'Sin ejecución confirmada') +
+            '</p><p class="pf-bottom-note">Se desconoce la cobertura total de workflows. '
             'Sin aprobación editorial ni prueba funcional independiente.</p>',
             "Muestra de asuntos de commits en ramas públicas; no equivale "
             "a trabajo integrado ni funcionalidades verificadas.",
