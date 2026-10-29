@@ -44,6 +44,8 @@ jobs:
           --theme-set templates/portfolio.css
           --allow-local-files
           -o out/portfolio-editorial-closure-v4.pdf
+      - name: Set professional PDF title and provenance metadata
+        run: uv run --with pymupdf python -m src.verify_editorial_review_pdf --fix-metadata
       - name: Validate PDF page count, content, geometry and citations
         run: uv run --with pymupdf python -m src.verify_editorial_review_pdf
       - name: Upload isolated preview and machine QA

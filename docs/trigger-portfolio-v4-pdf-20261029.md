@@ -3,3 +3,5 @@ Auditoría PDF V4, disparador aislado sin publicación. Fuente: run 40948183036,
 Diagnóstico de recorte de texto: conservar PDF incluso cuando falle QA.
 
 Segundo ensayo: reducción de alturas y fuentes, enlaces visibles.
+
+Ensayo final: portada y metadatos PDF normalizados.
