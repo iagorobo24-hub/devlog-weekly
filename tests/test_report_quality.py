@@ -45,7 +45,7 @@ class SlideLayoutTests(unittest.TestCase):
     def test_empty_week_uses_one_section_not_four(self):
         sample = {"repos": [{"name": f"x/repo{n}", "trivial": True} for n in range(4)]}
         sections, inactive, active = render.build_sections(sample)
-        self.assertEqual(len(sections), 1)
+        self.assertEqual(len(sections), 0)
         self.assertEqual(len(inactive), 4)
         self.assertFalse(active)
 

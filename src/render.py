@@ -99,9 +99,7 @@ def build_sections(summaries: dict) -> tuple[list[dict], list[str], list[dict]]:
     inactive = [r["name"].split("/")[-1] for r in repos if r.get("trivial", True)]
     pages = []
     if not active:
-        return [{"heading": "Sin cambios verificados",
-                 "subtitle": "Ninguno de los proyectos tuvo nuevos eventos de GitHub.",
-                 "lines": ["No se ha llamado a la IA ni hay avances nuevos que presentar."]}], inactive, active
+        return [], inactive, active
 
     pages.append({"heading": "Resumen de actividad", "subtitle": "Cambios registrados por GitHub, no éxitos de despliegue",
                   "lines": [
@@ -111,22 +109,34 @@ def build_sections(summaries: dict) -> tuple[list[dict], list[str], list[dict]]:
                       f"{int(r.get('activity_counts', {}).get('issues', 0))} issues."
                       for r in active
                   ]})
+    def weighted_lines(lines: list[str]) -> int:
+        return sum(max(1, math.ceil(len(line) / 78)) for line in lines)
+
     for repo in active:
         name = one_line(repo["name"].split("/")[-1])
-        pages.append({"heading": name, "subtitle": one_line(repo.get("pitch") or ""),
-                      "lines": ["### " + one_line(repo["titular"])]})
-        for ix, part in enumerate(paginated_bullets(repo.get("avances", [])), start=1):
+        pitch = one_line(repo.get("pitch") or "")
+        chunks = paginated_bullets(repo.get("avances", []), max_units=6)
+        first = ["### " + one_line(repo["titular"])] + (chunks[0] if chunks else [])
+        section = {"heading": name, "subtitle": pitch, "lines": first}
+        pages.append(section)
+        for ix, part in enumerate(chunks[1:], start=2):
             pages.append({"heading": name + " · avances " + str(ix),
                           "subtitle": "", "lines": part})
-        state = split_long(repo.get("estado", ""), 160)
-        for ix, part in enumerate(paginated_bullets(state), start=1):
-            pages.append({"heading": name + " · estado " + str(ix),
-                          "subtitle": "", "lines": part})
+
+        state = one_line(repo.get("estado", ""))
+        if state:
+            for ix, part in enumerate(paginated_bullets([state], max_units=5), start=1):
+                target = pages[-1]["lines"]
+                if weighted_lines(target + part) <= 8:
+                    target.extend(["**Estado:**"] + part)
+                else:
+                    pages.append({"heading": name + " · estado " + str(ix),
+                                  "subtitle": "", "lines": part})
+
         evidence = repo.get("verified_sources", [])
         if evidence:
             links = []
             for item in evidence[:5]:
-                # URLs are provided by the verified-source builder, not the model.
                 url = item["url"]
                 if not re.fullmatch(r"https://github[.]com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/(?:commit/[0-9a-fA-F]+|pull/[0-9]+|issues/[0-9]+)", url):
                     raise ValueError("fuente de GitHub inválida")
@@ -135,9 +145,16 @@ def build_sections(summaries: dict) -> tuple[list[dict], list[str], list[dict]]:
                 day = str(item.get("date") or "")[:10]
                 links.append(f"• [{label}]({url}) · {day} · {title}")
             if len(evidence) > 5:
-                links.append(f"**Y {len(evidence) - 5} eventos adicionales** en el historial de GitHub.")
-            pages.append({"heading": name + " · evidencias", "subtitle": "Referencias verificables (selección)",
-                          "lines": links})
+                links.append(f"**Y {len(evidence) - 5} eventos más** en GitHub.")
+            # Short evidence fits on the existing project page; otherwise
+            # use dedicated, pagination-safe evidence pages.
+            if len(links) <= 2 and weighted_lines(pages[-1]["lines"] + links) <= 8:
+                pages[-1]["lines"].extend(["**Evidencias:**"] + links)
+            else:
+                for ix in range(0, len(links), 3):
+                    pages.append({"heading": name + " · evidencias " + str(1 + ix // 3),
+                                  "subtitle": "Referencias verificables (selección)",
+                                  "lines": links[ix:ix + 3]})
     return pages, inactive, active
 
 
