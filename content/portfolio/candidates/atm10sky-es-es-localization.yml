@@ -1,0 +1,27 @@
+version: 1
+id: atm10sky-es-es-localization
+title: ATM10 To The Sky — localización es_es de misiones
+repo: iagorobo24-hub/atm10sky-es-es-localization
+revision: 1e0c648aafbf0204de1eaa2a191bcb7faf13b8c1
+visibility: public
+editorial_status: draft_only
+pitch: "Traducción comunitaria del libro de misiones FTB Quests de ATM10: To The Sky v2.0.7, con informe de auditoría y límites explícitos."
+statements:
+  - text: "El README describe la localización es_es y distingue la comprobación estática del muestreo realizado en el cliente del juego."
+    kind: documented
+    source_path: README.md
+  - text: "El informe de auditoría documenta la candidata 191 y delimita qué revisiones visuales no se han realizado."
+    kind: documented
+    source_path: AUDIT_REPORT.md
+  - text: "El repositorio contiene el archivo de idioma es_es.snbt preparado para la versión del modpack documentada."
+    kind: repository_file
+    source_path: es_es.snbt
+limitations:
+  - "Las cifras de cobertura y validación estática proceden del informe del autor y no se han recalculado desde este selector."
+  - "Las capturas del README corresponden a candidatas anteriores; la candidata 191 no tuvo revisión visual exhaustiva en el juego."
+  - "No se ha acreditado CI correcta en HEAD ni una prueba independiente del cliente con el archivo final."
+images: []
+publication_gate:
+  independent_functional_check_required: true
+  runtime_evidence_required: true
+  explicit_editorial_approval_required: true

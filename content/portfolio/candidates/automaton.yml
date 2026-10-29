@@ -1,0 +1,27 @@
+version: 1
+id: automaton
+title: AUTOMATON — laboratorio de trading simulado
+repo: iagorobo24-hub/AUTOMATON
+revision: 710179ba1d4de55c6ed3a81776d1521ad9581d09
+visibility: public
+editorial_status: draft_only
+pitch: "Laboratorio de investigación de agentes y estrategias con datos de mercado y capital virtual, sujeto a fallos de integración pendientes."
+statements:
+  - text: "El README presenta el sistema como laboratorio experimental con capital virtual, sin ejecución Live habilitada."
+    kind: documented
+    source_path: README.md
+  - text: "ARCHITECTURE.md describe contratos y la separación entre Backtest, Paper y Live Readiness."
+    kind: documented
+    source_path: ARCHITECTURE.md
+  - text: "El archivo frontend/package.json declara scripts de desarrollo, pruebas y compilación del frontend; no demuestra que funcionen."
+    kind: repository_file
+    source_path: frontend/package.json
+limitations:
+  - "La documentación reconoce defectos de arranque, compilación frontend e integración Risk/Paper; los resultados son de una auditoría anterior, no de esta revisión."
+  - "La CI de HEAD se ha observado fallida o cancelada; ninguna funcionalidad puede presentarse como operativa o lista para el público."
+  - "No hay evidencia de rentabilidad. Los datos financieros y el capital virtual no son asesoramiento de inversión ni habilitan órdenes reales."
+images: []
+publication_gate:
+  independent_functional_check_required: true
+  runtime_evidence_required: true
+  explicit_editorial_approval_required: true

@@ -1,0 +1,27 @@
+version: 1
+id: awesome-tia-portal
+title: Awesome TIA Portal — biblioteca técnica documentada
+repo: iagorobo24-hub/awesome-tia-portal
+revision: 656213a21eed2646ff85ee0e330e6e1747bbc2d5
+visibility: public
+editorial_status: draft_only
+pitch: "Catálogo público de contratos PLC, bloques, HMI y plantillas para TIA Portal con estados y evidencias por recurso."
+statements:
+  - text: "El README advierte que gran parte de las fichas son diseños documentados y no archivos XML importables."
+    kind: documented
+    source_path: README.md
+  - text: "CATALOG.md proporciona un índice de los recursos y su clasificación de estado declarada."
+    kind: documented
+    source_path: CATALOG.md
+  - text: "MATRIZ-TRAZABILIDAD.md distingue los artefactos existentes, las comprobaciones declaradas y las pendientes para cada recurso."
+    kind: documented
+    source_path: MATRIZ-TRAZABILIDAD.md
+limitations:
+  - "La documentación de alto nivel ofrece cifras inconsistentes sobre recursos verificados; no se publicará una cifra sin reconciliar la matriz."
+  - "La existencia de README, ejemplos SCL o workflows de GitHub no acredita importación XML ni funcionamiento general en PLC/PLCSIM."
+  - "Las pruebas reales descritas para recursos concretos requieren revisión de sus evidencias antes de presentarse como certificadas."
+images: []
+publication_gate:
+  independent_functional_check_required: true
+  runtime_evidence_required: true
+  explicit_editorial_approval_required: true
