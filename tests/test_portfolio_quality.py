@@ -39,6 +39,9 @@ class TestPortfolioQuality(unittest.TestCase):
         markdown = render_master.render_markdown(entries)
         self.assertEqual(markdown.count("<!-- _class: portfolio -->"), len(slides))
         self.assertEqual(len(slides), 3)
+        # Marp needs an empty line before every slide delimiter. A count of
+        # Jinja slide entries alone does not verify actual slide boundaries.
+        self.assertEqual(markdown.count("\n\n---\n\n"), len(slides))
 
     def test_video_sorting_is_numeric_after_ten_pages(self):
         import tempfile

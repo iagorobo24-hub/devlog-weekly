@@ -17,6 +17,7 @@ style: |
 *Resumen interpretativo: contrastar con los enlaces a GitHub*
 
 {% for slide in slides %}
+
 ---
 
 <!-- _class: portfolio -->
@@ -32,6 +33,7 @@ style: |
 [Repositorio original]({{ slide.repo_url }})
 
 _Documentación interpretativa; no acredita por sí misma despliegue ni pruebas._
+
 {% else %}
 ### Evidencias de GitHub
 {% for src in slide.sources %}
@@ -41,5 +43,6 @@ _Documentación interpretativa; no acredita por sí misma despliegue ni pruebas.
 [Repositorio original]({{ slide.repo_url }})
 
 _Referencias verificables, no una certificación del funcionamiento._
+
 {% endif %}
 {% endfor %}
