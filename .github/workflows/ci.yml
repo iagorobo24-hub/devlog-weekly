@@ -67,6 +67,25 @@ jobs:
               raise SystemExit(f"Desincronización de páginas: {len(actual)} != {expected}")
           print(f"PORTFOLIO PREVIEW: {len(entries)} proyectos, {len(actual)} diapositivas visuales")
           PYCODE
+      - name: Generar portfolio editorial V2 en vista previa aislada
+        run: |
+          uv run python src/render_portfolio_v2.py
+          uv run python - <<'PYCODE'
+          from src.portfolio_data import load_portfolio
+          from src.render_portfolio_v2 import build_slides, MD_PATH, THEME
+          import subprocess
+          from pathlib import Path
+          images_dir = Path("out/v2-png")
+          images_dir.mkdir(parents=True, exist_ok=True)
+          subprocess.run(["marp", str(MD_PATH), "--images", "png", "--no-stdin",
+                          "--html", "--allow-local-files", "--theme-set", str(THEME),
+                          "-o", str(images_dir / "slide.png")], check=True)
+          expected = len(build_slides(load_portfolio()))
+          images = list(images_dir.glob("slide.*.png"))
+          if len(images) != expected:
+              raise SystemExit(f"Las imágenes no coinciden con las diapositivas: {len(images)} != {expected}")
+          print(f"PORTFOLIO V2: {expected} diapositivas y {len(images)} imágenes verificadas")
+          PYCODE
       - uses: actions/upload-artifact@v4
         with:
           name: devlog-quality-weekly-preview
@@ -76,6 +95,10 @@ jobs:
             out/portfolio.md
             out/portfolio.pdf
             out/video/slide.*.png
+            out/portfolio-v2.md
+            out/portfolio-v2.pdf
+            out/portfolio-v2-manifest.json
+            out/v2-png/slide.*.png
           if-no-files-found: error
           retention-days: 30
 

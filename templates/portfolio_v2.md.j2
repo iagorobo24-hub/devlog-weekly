@@ -1,0 +1,18 @@
+---
+marp: true
+theme: portfolio-v2
+paginate: false
+size: 16:9
+html: true
+---
+
+{% for slide in slides %}
+<!-- _class: pf-{{ slide.kind }} -->
+
+{{ slide.markup }}
+
+{% if not loop.last %}
+---
+
+{% endif %}
+{% endfor %}

@@ -1,0 +1,91 @@
+version: 2
+title: "Ingeniería aplicada. Software que resuelve problemas."
+subtitle: "Selección de proyectos públicos · Automatización industrial y desarrollo web"
+editorial_note: "Capacidades documentadas, pruebas observadas y límites identificados por separado."
+projects:
+  - repo: iagorobo24-hub/awesome-tia-portal
+    revision: 656213a21eed2646ff85ee0e330e6e1747bbc2d5
+    title: "Awesome TIA Portal"
+    category: "AUTOMATIZACIÓN INDUSTRIAL"
+    statement: "Una biblioteca técnica para estandarizar recursos de PLC y HMI."
+    pitch: "Documentación y contratos reutilizables para Siemens TIA Portal V20."
+    problem: "Los bloques repetidos y las interfaces inconsistentes dificultan mantener proyectos PLC."
+    solution: "Organizar UDT, FB/FC, OB, HMI y plantillas bajo contratos y documentación de uso explícita."
+    stack: ["TIA Portal V20", "SCL", "S7-1200 / S7-1500", "HMI", "Python"]
+    hero_image: "assets/portfolio/tia-architecture.svg"
+    hero_caption: "Diagrama de arquitectura, obtenido del propio repositorio."
+    detail_image: "assets/portfolio/tia-plcsim.png"
+    detail_caption: "Captura de panel PLCSIM versionada; no equivale a certificar toda la biblioteca."
+    capabilities:
+      - "Catálogo de recursos con interfaces y dependencias documentadas."
+      - "Contratos UDT como punto de unión entre la lógica FB y la interfaz HMI."
+      - "Matriz de trazabilidad del estado y las pruebas de cada recurso."
+    evidence:
+      - label: "Catálogo versionado"
+        description: "Inventario de recursos y su grado de disponibilidad."
+        url: "https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/CATALOG.md"
+      - label: "Trazabilidad por recurso"
+        description: "Fuente, compilación y evidencias registradas."
+        url: "https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/MATRIZ-TRAZABILIDAD.md"
+      - label: "Fuente SCL de alarma"
+        description: "Caso concreto con fuente y evidencia de compilación; no extrapolable al conjunto."
+        url: "https://github.com/iagorobo24-hub/awesome-tia-portal/tree/656213a21eed2646ff85ee0e330e6e1747bbc2d5/bloques-de-funcion/fb-alarm-latch"
+    status: "BIBLIOTECA EN VALIDACIÓN"
+    status_detail: "Predominan los recursos documentados; las importaciones XML generalizadas y la validación de todos los bloques siguen pendientes."
+    status_source: "https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/README.md"
+    limitations:
+      - "La mayoría de las fichas no tiene bloque XML importable."
+      - "Una prueba concreta no acredita el funcionamiento del conjunto."
+    next_steps:
+      - "Completar exportaciones y pruebas reproducibles por recurso."
+      - "Publicar evidencia de importación y ejecución donde exista."
+    repo_url: "https://github.com/iagorobo24-hub/awesome-tia-portal"
+    demo_url: "https://iagorobo24-hub.github.io/awesome-tia-portal/"
+    asset_sources:
+      hero_image: "https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/docs/img/arquitectura.svg"
+      detail_image: "https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/bloques-de-funcion/fb-alarm-latch/assets/plcsim-control-panel-2026-10-21.png"
+
+  - repo: iagorobo24-hub/proyecto-pfc-iago-duran
+    revision: 205725a895986358e6e49e27c3629648857f86ad
+    title: "PFC Tools"
+    category: "DESARROLLO WEB · INGENIERÍA"
+    statement: "Una SPA académica que reúne herramientas eléctricas y logísticas."
+    pitch: "Aplicación modular con catálogo, simulación, informes e integración de IA."
+    problem: "Las operaciones técnicas y logísticas suelen estar dispersas entre herramientas sin integración."
+    solution: "Unificar siete módulos especializados y su navegación en una misma aplicación web."
+    stack: ["React 19", "Vite 7", "Supabase", "Vercel", "Vitest", "Playwright"]
+    hero_image: "assets/portfolio/pfc-dashboard.png"
+    hero_caption: "Captura del dashboard dentro de las pruebas versionadas."
+    detail_image: "assets/portfolio/pfc-kpi.png"
+    detail_caption: "Captura versionada del panel de KPI."
+    second_image: "assets/portfolio/pfc-almacen.png"
+    second_caption: "Captura versionada del simulador de almacén."
+    capabilities:
+      - "Dashboard con acceso a los módulos de fichas, almacén e incidencias."
+      - "KPI, presupuestos y formación con funciones de gestión e informes."
+      - "Asistente SONEX y servicios de IA con gateway del lado servidor."
+    evidence:
+      - label: "Descripción funcional"
+        description: "Rutas de los siete módulos y límites documentados."
+        url: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran/blob/205725a895986358e6e49e27c3629648857f86ad/README.md"
+      - label: "Pruebas E2E"
+        description: "Especificaciones de recorrido Playwright; requieren ejecución para acreditarse."
+        url: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran/tree/205725a895986358e6e49e27c3629648857f86ad/app/e2e"
+      - label: "CI del commit revisado"
+        description: "La ejecución CI consultada terminó en fallo; no afirmar validación completa."
+        url: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran/actions/runs/40444658645"
+    status: "APLICACIÓN ACADÉMICA EN EVOLUCIÓN"
+    status_detail: "Los módulos y las capturas están versionados. La CI principal del commit consultado terminó en fallo; no hay certificación E2E del despliegue."
+    status_source: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran/actions/runs/40444658645"
+    limitations:
+      - "Los resultados de pruebas deben verificarse sobre un commit específico."
+      - "Las capturas del repositorio no certifican el funcionamiento de producción."
+    next_steps:
+      - "Resolver la CI del commit objetivo y documentar resultados E2E."
+      - "Conservar capturas de ejecución actualizadas y reproducibles."
+    repo_url: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran"
+    demo_url: "https://proyecto-pfc-iago-duran.vercel.app"
+    asset_sources:
+      hero_image: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran/blob/205725a895986358e6e49e27c3629648857f86ad/app/e2e/screenshots/02-topbar-sidebar.png"
+      detail_image: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran/blob/205725a895986358e6e49e27c3629648857f86ad/app/e2e/screenshots/07-kpi-resultados.png"
+      second_image: "https://github.com/iagorobo24-hub/proyecto-pfc-iago-duran/blob/205725a895986358e6e49e27c3629648857f86ad/app/e2e/screenshots/05-almacen.png"
