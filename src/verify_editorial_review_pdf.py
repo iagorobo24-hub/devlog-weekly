@@ -78,7 +78,11 @@ def validate_pdf(path: Path, source: dict) -> dict:
             text = page.get_text("text")
             if not text or len(text) < 145:
                 raise ValueError(f"Página {index+1}: texto incompleto")
-            if any(term.casefold() not in text.casefold() for term in KEYWORDS[index]):
+            # PDF extraction splits text across line boundaries; normalize
+            # whitespace without weakening the per-page content requirements.
+            normalized = " ".join(text.casefold().split())
+            if any(" ".join(term.casefold().split()) not in normalized
+                   for term in KEYWORDS[index]):
                 raise ValueError(f"Página {index+1}: falta contenido clave")
             if "BORRADOR INTERNO" not in text or "NO PUBLICAR" not in text:
                 raise ValueError(f"Página {index+1}: falta advertencia")
@@ -92,6 +96,11 @@ def validate_pdf(path: Path, source: dict) -> dict:
                         or not PINNED.fullmatch(parsed.path)):
                     raise ValueError(f"Página {index+1}: URL no versionada")
                 urls.append(url)
+            # In the case-study slides evidence links are mandatory; if
+            # markup is clipped, Marp may silently omit the entire link.
+            required_links = 2 if index in (2, 3, 4) else (1 if index in (5, 6) else 0)
+            if len(urls) < required_links:
+                raise ValueError(f"Página {index+1}: evidencia recortada o no enlazada")
             links += len(urls)
             summaries.append({"page": index+1, "chars": len(text),
                               "pinned_links": len(urls),

@@ -192,3 +192,102 @@ section[class*="pf-"] a:hover { text-decoration: underline; }
 .pf-drift-item strong { color: #e8f2fb; font-size: 25px; }
 .pf-drift-item span { color: #a3b9c9; font-size: 16px; }
 .pf-drift-item small { color: #47d5d1; font-size: 14px; margin-top: auto; }
+
+
+/* V4 editorial review only. Do not change the approved V2 deck styles. */
+section.pf-closure-map {
+  padding: 29px 52px !important;
+}
+section.pf-closure-map h2 {
+  font-size: 33px;
+  margin: 5px 0 9px;
+}
+section.pf-closure-map .pf-lead {
+  font-size: 16px;
+  margin-bottom: 9px !important;
+}
+section.pf-closure-map .pf-two {
+  margin-top: 12px;
+  gap: 12px;
+}
+section.pf-closure-map .pf-project-summary {
+  min-height: 142px;
+  padding: 14px 18px;
+  border-radius: 11px;
+}
+section.pf-closure-map .pf-project-summary h3 {
+  font-size: 21px;
+  margin: 5px 0 7px;
+}
+section.pf-closure-map .pf-project-summary p {
+  font-size: 14px;
+  line-height: 1.27;
+}
+section.pf-closure-map .pf-project-summary .pf-tech {
+  font-size: 10px;
+  margin-top: 10px;
+}
+section.pf-closure-map .pf-bottom-note {
+  margin-top: 11px !important;
+  font-size: 10px;
+}
+
+section.pf-closure-main {
+  padding: 25px 47px !important;
+}
+section.pf-closure-main .pf-meta {
+  font-size: 10px;
+}
+section.pf-closure-main h2 {
+  font-size: 35px;
+  margin: 5px 0 9px;
+}
+section.pf-closure-main .pf-lead {
+  max-width: none;
+  font-size: 16px;
+  line-height: 1.27;
+  margin-bottom: 8px !important;
+}
+section.pf-closure-main .pf-two {
+  margin-top: 10px;
+  gap: 11px;
+}
+section.pf-closure-main .pf-card {
+  border-radius: 10px;
+  padding: 11px 15px;
+}
+section.pf-closure-main .pf-card p {
+  font-size: 14px;
+  line-height: 1.23;
+  margin-top: 5px !important;
+}
+section.pf-closure-main .pf-mini {
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+section.pf-closure-main .pf-evidence-grid {
+  grid-template-columns: 39% 61%;
+  margin-top: 11px;
+  gap: 10px;
+}
+section.pf-closure-main .pf-evidence-list {
+  gap: 7px;
+}
+section.pf-closure-main .pf-evidence {
+  min-height: 0;
+  padding: 8px 11px;
+  border-radius: 9px;
+}
+section.pf-closure-main .pf-evidence strong {
+  font-size: 11px;
+  line-height: 1.2;
+}
+section.pf-closure-main .pf-evidence span {
+  font-size: 10px;
+  line-height: 1.25;
+  margin-top: 3px;
+}
+section.pf-closure-main .pf-limit {
+  font-size: 12px;
+  line-height: 1.3;
+}
