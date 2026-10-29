@@ -3,7 +3,13 @@ name: devlog semanal
 on:
   schedule:
     - cron: '0 7 * * MON'   # UTC. En horario de verano español son las 09:00.
-  workflow_dispatch:         # para dispararlo a mano
+  workflow_dispatch:
+    inputs:
+      modo_prueba:
+        description: 'Verificar Drive con un PDF aislado; no sobrescribir W44 ni guardar state'
+        type: boolean
+        required: true
+        default: true
 permissions:
   contents: read
 
@@ -58,13 +64,53 @@ jobs:
         run: uv run python src/render.py
 
       - name: Publicar
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         run: uv run python src/publish.py
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
           RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
 
+      - name: Prueba de extremo a extremo en Drive, con descarga y SHA256
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.modo_prueba == true }}
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+          RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
+          RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
+        run: |
+          uv run python - <<'PY'
+          import hashlib
+          import os
+          import tempfile
+          from pathlib import Path
+          from src.publish import upload
+
+          original = Path("out/deck.pdf")
+          if not original.is_file() or original.stat().st_size == 0:
+              raise SystemExit("No se generó un PDF válido")
+          remote_name = os.environ.get("RCLONE_REMOTE", "gdrive")
+          destination = (
+              f"{remote_name}:Portfolio/verificaciones/"
+              f"{os.environ['GITHUB_RUN_ID']}/devlog.pdf"
+          )
+          config = os.environ["RCLONE_CONF"]
+          if not config:
+              raise SystemExit("Falta RCLONE_CONF")
+          upload(original, destination, config, remote_name, immutable=True)
+          with tempfile.TemporaryDirectory() as directory:
+              copy = Path(directory) / "devlog-download.pdf"
+              upload(Path(destination), str(copy), config, remote_name)
+              sha_local = hashlib.sha256(original.read_bytes()).hexdigest()
+              sha_drive = hashlib.sha256(copy.read_bytes()).hexdigest()
+              if sha_local != sha_drive:
+                  raise SystemExit("ERROR: no coincide SHA256 del PDF en Drive")
+          print("SUCCESS: Drive ha guardado y devuelto un PDF byte a byte idéntico")
+          print(f"Ruta aislada verificada: {destination}")
+          print(f"SHA256: {sha_local}")
+          PY
+
       - name: Confirmar estado
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         # Deliberadamente después de publish.py: si algo falla antes de aquí,
         # el job para y state/ no se toca, así que la semana se puede
         # reintentar sin perder la ventana ni duplicar narrativa.
@@ -73,6 +119,7 @@ jobs:
           uv run python src/synthesize.py --commit-state
 
       - name: Renderizar deck maestro
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         # Después de "Confirmar estado" a propósito: lee state/narrative/*.md,
         # y ahí ya está la narrativa actualizada con lo de esta semana (antes
         # de "Confirmar estado" seguiría siendo la de la semana pasada). Se
@@ -80,12 +127,14 @@ jobs:
         run: uv run python src/render_master.py
 
       - name: Renderizar vídeo del deck maestro
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         # Lee out/portfolio.md (lo acaba de escribir el paso anterior) y
         # narra cada slide con edge-tts. Mismo umbral que render_master.py,
         # así que se salta sola si ese paso también se saltó.
         run: uv run python src/render_video.py
 
       - name: Publicar deck maestro
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         # Sube out/portfolio.pdf y, si se generó, out/portfolio.mp4.
         run: uv run python src/publish.py --target master
         env:
@@ -94,6 +143,7 @@ jobs:
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
 
       - name: Guardar estado
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         run: |
           git config user.name "devlog-bot"
           git config user.email "bot@users.noreply.github.com"
