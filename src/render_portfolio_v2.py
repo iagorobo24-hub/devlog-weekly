@@ -63,7 +63,7 @@ def build_slides(data: dict, latest: list[dict] | None = None) -> list[dict]:
              f'<h1>{esc(data["title"])}</h1>'
              f'<p class="pf-cover-subtitle">{esc(data["subtitle"])}</p>'
              f'<div class="pf-cover-footer"><span>{len(projects)} PROYECTOS DESTACADOS</span>'
-             '<span>EDICIÓN DOCUMENTADA · FUENTES EN GITHUB</span></div>',
+             f'<span>{esc(data["edition"])}</span></div>',
              f'Presentamos una selección de {len(projects)} proyectos públicos de ingeniería y desarrollo de software, con capacidades documentadas y límites explícitos.'),
         page("overview",
              '<div class="pf-meta">01 / MAPA DE PROYECTOS</div>'
@@ -90,7 +90,10 @@ def build_slides(data: dict, latest: list[dict] | None = None) -> list[dict]:
             + text_card("EL PROBLEMA", p["problem"])
             + text_card("LA SOLUCIÓN", p["solution"], accent=True)
             + '<div class="pf-pills">' + "".join(f'<span>{esc(t)}</span>' for t in p["stack"][:4]) + '</div>'
-            + '</div>' + image_html(p, "hero_image", "pf-shot pf-hero-shot") + '</div>',
+            + '<div class="pf-actions">'
+            + f'<a href="{esc(p["repo_url"])}">Código fuente ↗</a>'
+            + (f'<a href="{esc(p["demo_url"])}">Visitar sitio público ↗</a>' if p.get("demo_url") else "")
+            + '</div></div>' + image_html(p, "hero_image", "pf-shot pf-hero-shot") + '</div>',
             f'{p["title"]}. {p["problem"]} {p["solution"]}', repo))
         gallery = image_html(p, "detail_image", "pf-shot pf-gallery-image")
         if p.get("second_image"):

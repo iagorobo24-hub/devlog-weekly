@@ -1,4 +1,5 @@
 version: 2
+edition: "29/10/2026 · Snapshot documental"
 title: "Ingeniería aplicada. Software que resuelve problemas."
 subtitle: "Selección de proyectos públicos · Automatización industrial y desarrollo web"
 editorial_note: "Capacidades documentadas, pruebas observadas y límites identificados por separado."

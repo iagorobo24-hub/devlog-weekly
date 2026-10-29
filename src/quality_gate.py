@@ -67,9 +67,13 @@ def check_pdf(path: Path, manifest: Path) -> dict:
             raise ValueError("PDF sin suficientes capturas reales")
         if len(links) < sum(len(p["evidence"]) for p in data["projects"]):
             raise ValueError("faltan referencias clicables")
+        approved_sites = {p.get("demo_url") for p in data["projects"] if p.get("demo_url")}
+        for project in data["projects"]:
+            if project.get("demo_url") and project["demo_url"] not in links:
+                raise ValueError(f"enlace al sitio público ausente: {project['repo']}")
         for url in links:
             host = urlparse(url)
-            if host.scheme != "https" or host.netloc != "github.com":
+            if host.scheme != "https" or not (host.netloc == "github.com" or url in approved_sites):
                 raise ValueError(f"enlace externo inesperado: {url}")
         return {"status": "pass", "pages": len(doc), "links": len(links),
                 "embedded_images": image_total, "projects": len(data["projects"])}

@@ -38,6 +38,7 @@ class EditorialPortfolioTests(unittest.TestCase):
         for p in self.data["projects"]:
             self.assertIn(p["title"], source)
             self.assertIn(p["status_detail"], source)
+            self.assertIn(p["demo_url"], source)
             for link in p["evidence"]:
                 self.assertIn(link["url"], source)
         self.assertNotIn("Evolución descrita por IA", source)

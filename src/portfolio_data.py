@@ -46,6 +46,7 @@ def load_portfolio(path: Path = DATA_PATH) -> dict:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("version") != 2:
         raise ValueError("schema de portfolio desconocido")
+    require_text(data.get("edition"), "edition")
     require_text(data.get("title"), "title")
     require_text(data.get("subtitle"), "subtitle")
     require_text(data.get("editorial_note"), "editorial_note", 400)

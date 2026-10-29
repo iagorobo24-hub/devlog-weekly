@@ -85,3 +85,6 @@ section[class*="pf-"] a:hover { text-decoration: underline; }
 .pf-recent-row { display: flex; flex-direction: column; border-top: 1px solid var(--pf-rule); padding: 13px 0; color: var(--pf-text) !important; }
 .pf-recent-id { color: var(--pf-cyan); font-size: 12px; font-family: 'DejaVu Sans Mono', monospace; }
 .pf-recent-title { font-size: 16px; line-height: 1.3; color: var(--pf-text); margin-top: 4px; }
+
+.pf-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 2px; }
+.pf-actions a { border-radius: 20px; border: 1px solid #366e7f; background: #153d50; padding: 8px 12px; font-size: 14px; font-weight: 700; }
