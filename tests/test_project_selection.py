@@ -144,6 +144,10 @@ class ProjectSelectionTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "privados bloqueados"):
                     cli.write_report(report, public, "public")
                 report["ranked"][0]["visibility"] = "public"
+                report["component_hints"] = [{"visibility": "private", "repo": "secret"}]
+                with self.assertRaisesRegex(ValueError, "privados bloqueados"):
+                    cli.write_report(report, public, "public")
+                report.pop("component_hints")
                 report["watchlist"] = [{"visibility": "private", "id": "secret"}]
                 with self.assertRaisesRegex(ValueError, "privados bloqueados"):
                     cli.write_report(report, public, "public")

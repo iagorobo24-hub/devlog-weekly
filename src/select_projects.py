@@ -21,14 +21,17 @@ import yaml
 
 try:
     from src.project_selection_core import build_selection, configured_projects
+    from src.component_selection import components_from_commits, read_private_mapping
 except ModuleNotFoundError:
     from project_selection_core import build_selection, configured_projects
+    from component_selection import components_from_commits, read_private_mapping
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config" / "project-selection.yml"
 PUBLIC_OUT = ROOT / "out" / "project-selection-public.json"
 PRIVATE_DIR = Path.home() / ".local" / "share" / "devlog-weekly" / "restricted"
 PRIVATE_OUT = PRIVATE_DIR / "project-selection-private.json"
+PRIVATE_COMPONENTS = PRIVATE_DIR / "components.yml"
 LOG = logging.getLogger("project-selection")
 
 
@@ -135,7 +138,7 @@ def write_report(result: dict, target: Path, mode: str) -> None:
     output = ensure_safe_output(target, mode)
     items = [x for section in ("ranked", "other_active", "watchlist")
              for x in result.get(section, [])]
-    if mode == "public" and (result.get("visibility") != "public" or any(
+    if mode == "public" and (result.get("component_hints") or result.get("visibility") != "public" or any(
             p.get("visibility") != "public" for p in items)):
         raise ValueError("datos privados bloqueados en publicación pública")
     if mode == "private-local" and (result.get("visibility") != "private-local" or any(
@@ -169,6 +172,13 @@ def run(*, mode: str = "public", now: datetime | None = None,
         with Github(auth=Auth.Token(credentials()), per_page=100) as gh:
             inventory = discover(gh, config, now=now, mode=mode)
     result = build_selection(inventory, config, now=now, visibility=mode)
+    if mode == "private-local":
+        # Never load local private mapping while preparing a public report.
+        mapping = read_private_mapping(PRIVATE_COMPONENTS)
+        result["component_hints"] = (components_from_commits(
+            inventory, mapping, owner=config["owner"], now=now,
+            recent_days=config["recent_days"], lookback_days=config["lookback_days"]
+        ) if mapping else [])
     write_report(result, destination, mode)
     # Private report locations and candidate names are not logged/uploaded.
     LOG.info("%s: inventario de %d repositorios, %d candidatos; sin publicar ni tocar state",

@@ -59,3 +59,11 @@ una vista previa pública, sin publicar ni modificar el portfolio maestro.
   fuentes, capturas, capacidades y limitaciones comprobadas. El selector
   nunca fabrica una ficha ni cambia automáticamente la presentación.
 \nLa segunda salida pública, out/project-selection-review.json, compara candidatos\ncon las fichas existentes e indica cuáles requieren evidencias nuevas. Nunca\npromueve proyectos automáticamente ni publica fichas sin una revisión.\n
+## Monorepos y scopes privados
+
+Puede crearse un mapeo protegido local components.yml junto al informe privado.
+La atribución reconoce únicamente scopes explícitos y disjuntos de commits
+convencionales. Los cambios compartidos o ambiguos quedan sin asignar.
+El resultado es un indicio inferior de actividad: se deberá contrastar cada
+componente contra los archivos modificados antes de usarlo editorialmente.
+Este mapeo NO forma parte de GitHub, CI ni la presentación pública.
