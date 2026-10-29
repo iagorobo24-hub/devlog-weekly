@@ -1,0 +1,54 @@
+name: Portfolio V4 Editorial PDF QA (not for publication)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Completed public selector run ID with V4 artifact
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  editorial-pdf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
+      - run: uv sync
+      - uses: actions/setup-node@v7
+      - run: npm install -g @marp-team/marp-cli
+      - name: Retrieve reviewed public Markdown and manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: project-selection-public-preview
+          run-id: ${{ inputs.source_run_id }}
+          repository: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: out
+      - name: Verify immutable source
+        run: uv run python -m src.verify_editorial_review_pdf --preflight
+      - name: Export editorial PDF without publishing
+        run: >
+          marp out/portfolio-editorial-closure-v4.md
+          --pdf --no-stdin --html
+          --theme-set templates/portfolio.css
+          --allow-local-files
+          -o out/portfolio-editorial-closure-v4.pdf
+      - name: Validate PDF page count, content, geometry and citations
+        run: uv run --with pymupdf python -m src.verify_editorial_review_pdf
+      - name: Upload isolated preview and machine QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-v4-editorial-pdf-qa
+          path: |
+            out/portfolio-editorial-closure-v4.pdf
+            out/portfolio-editorial-closure-v4.md
+            out/portfolio-editorial-closure-v4-manifest.json
+            out/portfolio-editorial-closure-v4-pdf-qa.json
+          if-no-files-found: error
+          retention-days: 30
