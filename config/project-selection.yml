@@ -1,0 +1,33 @@
+version: 1
+owner: iagorobo24-hub
+lookback_days: 30
+recent_days: 7
+max_commits_per_repo: 200
+max_repositories: 100
+top_n: 5
+
+# PUBLIC editorial priorities, subjective and reviewable, NOT claims of successful deployment.
+# All other public repositories are discovered automatically, with priority 1.
+# Never add a private repository to this tracked file.
+projects:
+  - id: guiaia
+    title: GuiaIA · Minecraft
+    repos: [iagorobo24-hub/GuiaIA]
+    priority: 5
+  - id: tia-rocaroibas
+    title: TIA Portal RocaRoibas
+    repos: [iagorobo24-hub/T-IA-Portal-RocaRoibas]
+    priority: 4
+  - id: devlog-weekly
+    title: Devlog Weekly
+    repos: [iagorobo24-hub/devlog-weekly]
+    priority: 3
+    spotlight: false # El propio generador no debe desplazar a los proyectos que analiza
+  - id: awesome-tia
+    title: Awesome TIA Portal
+    repos: [iagorobo24-hub/awesome-tia-portal]
+    priority: 2
+  - id: pfc-tools
+    title: PFC Tools
+    repos: [iagorobo24-hub/proyecto-pfc-iago-duran]
+    priority: 2
