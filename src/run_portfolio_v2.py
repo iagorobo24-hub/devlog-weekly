@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
 import os
 import shutil
@@ -51,8 +52,12 @@ def prepare(*, force: bool = False, smoke: bool = False) -> bool:
     for source, target in ((PDF_PATH, PUBLIC_PDF), (VIDEO_PATH, PUBLIC_MP4), (SRT_PATH, PUBLIC_SRT)):
         temporary = target.with_suffix(target.suffix + ".tmp")
         shutil.copy2(source, temporary)
+        # The uploaded/exported copy must be the exact bytes which passed the PDF gate.
+        if hashlib.sha256(source.read_bytes()).digest() != hashlib.sha256(temporary.read_bytes()).digest():
+            raise ValueError(f"copia con contenido modificado: {source.name}")
         os.replace(temporary, target)
-    LOG.info("Portfolio V2 preparado: PDF + MP4 + SRT; sin Drive")
+    check_pdf(PUBLIC_PDF, MANIFEST_PATH)
+    LOG.info("Portfolio V2 preparado: PDF + MP4 + SRT; copia íntegra y metadatos PDF validados")
     return True
 
 

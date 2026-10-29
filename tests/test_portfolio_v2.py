@@ -99,6 +99,15 @@ class EditorialPortfolioTests(unittest.TestCase):
             self.assertGreaterEqual(width, 650)
             self.assertGreaterEqual(height, 600)
 
+    def test_tia_evidence_is_editorial_not_tiny_plcsim_screenshot(self):
+        tia = self.data["projects"][0]
+        self.assertEqual(tia["detail_image"], "assets/portfolio/tia-alarm-evidence.svg")
+        self.assertTrue(tia["asset_sources"]["detail_image"].endswith("evidencia-plcsim-2026-10-21.json"))
+        self.assertIn("lecturas parciales", tia["detail_caption"])
+        graphic = (Path(__file__).resolve().parent.parent / tia["detail_image"]).read_text()
+        for expected in ("65/65", "pasos satisfactorios", "cuatro casos", "CPU virtual"):
+            self.assertIn(expected, graphic)
+
     def test_each_walkthrough_has_a_real_figure_and_pinned_link(self):
         slides = build_slides(self.data)
         for project in self.data["projects"]:

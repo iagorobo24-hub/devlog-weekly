@@ -20,8 +20,9 @@ projects:
   - Python
   hero_image: assets/portfolio/tia-flow-editorial.svg
   hero_caption: Esquema editorial basado en la arquitectura documentada; los módulos del catálogo no están todos implementados.
-  detail_image: assets/portfolio/tia-plcsim.png
-  detail_caption: Captura de panel PLCSIM versionada; no equivale a certificar toda la biblioteca.
+  detail_image: assets/portfolio/tia-alarm-evidence.svg
+  detail_caption: 'Resumen visual del registro PLCSIM (21/10/2026): 65/65 pasos, 9 casos y 4 casos con lecturas parciales. No es una
+    captura ni una certificación.'
   capabilities:
   - Catálogo de recursos con interfaces y dependencias documentadas.
   - Contratos UDT como punto de unión entre la lógica FB y la interfaz HMI.
@@ -50,7 +51,7 @@ projects:
   demo_url: https://iagorobo24-hub.github.io/awesome-tia-portal/
   asset_sources:
     hero_image: https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/docs/img/arquitectura.svg
-    detail_image: https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/bloques-de-funcion/fb-alarm-latch/assets/plcsim-control-panel-2026-10-21.png
+    detail_image: https://github.com/iagorobo24-hub/awesome-tia-portal/blob/656213a21eed2646ff85ee0e330e6e1747bbc2d5/bloques-de-funcion/fb-alarm-latch/evidencia-plcsim-2026-10-21.json
   proof_points:
   - label: 2 DE 24 RECURSOS
     detail: Fuente y ejecución observadas en PLCSIM; los otros 22 siguen como fichas de diseño.

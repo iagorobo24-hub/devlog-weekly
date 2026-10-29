@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 790" width="1120" height="790">
+<title>Resultados de la prueba FB_AlarmLatch en CPU virtual</title>
+<desc>La evidencia de 21 octubre 2026 registra 65 pasos satisfactorios, nueve casos de comportamiento, cero pasos fallidos y ejecución en PLCSIM. Cuatro casos contienen lecturas parciales; no acredita planta real.</desc>
+<rect x="0" y="0" width="1120" height="790" rx="30" fill="#0b1d2d"/>
+<rect x="25" y="25" width="1070" height="740" rx="22" fill="#10283b" stroke="#245269" stroke-width="2"/>
+<text x="68" y="88" font-family="DejaVu Sans" font-weight="bold" font-size="27" fill="#54dedb">FB_AlarmLatch</text>
+<text x="68" y="135" font-family="DejaVu Sans" font-size="24" fill="#d4e5ed">EVIDENCIA DE EJECUCIÓN · 21 OCT 2026</text>
+<rect x="60" y="177" width="620" height="242" rx="22" fill="#123e47" stroke="#439e9e" stroke-width="2"/>
+<text x="92" y="330" font-family="DejaVu Sans" font-size="140" font-weight="bold" fill="#f4fffe">65/65</text>
+<text x="95" y="383" font-family="DejaVu Sans" font-size="29" fill="#a8e9e3">pasos satisfactorios</text>
+<rect x="707" y="177" width="350" height="110" rx="19" fill="#1b3548" stroke="#47758c" stroke-width="2"/>
+<text x="740" y="253" font-family="DejaVu Sans" font-weight="bold" font-size="66" fill="#f4fffe">9</text>
+<text x="835" y="247" font-family="DejaVu Sans" font-size="25" fill="#bbd7e4">casos</text>
+<rect x="707" y="309" width="350" height="110" rx="19" fill="#1b3548" stroke="#47758c" stroke-width="2"/>
+<text x="740" y="385" font-family="DejaVu Sans" font-weight="bold" font-size="66" fill="#f4fffe">0</text>
+<text x="835" y="380" font-family="DejaVu Sans" font-size="23" fill="#bbd7e4">pasos fallidos</text>
+<line x1="71" y1="463" x2="1046" y2="463" stroke="#386274" stroke-width="2"/>
+<text x="72" y="521" font-family="DejaVu Sans" font-weight="bold" font-size="27" fill="#f4fffe">ENTORNO Y ALCANCE</text>
+<text x="74" y="571" font-family="DejaVu Sans" font-size="25" fill="#cce2eb">TIA Portal V20 · PLCSIM Advanced V7</text>
+<text x="74" y="611" font-family="DejaVu Sans" font-size="25" fill="#cce2eb">CPU virtual S7-1500 · compilación 0 errores / 0 avisos</text>
+<rect x="65" y="645" width="987" height="85" rx="14" fill="#39322a" stroke="#a38352" stroke-width="2"/>
+<text x="84" y="681" font-family="DejaVu Sans" font-size="23" fill="#ffe4ad">Limitación: cuatro casos incluyen lecturas parciales.</text>
+<text x="84" y="712" font-family="DejaVu Sans" font-size="23" fill="#ffe4ad">Prueba en CPU virtual; no certifica una instalación real.</text>
+</svg>
