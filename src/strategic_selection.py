@@ -25,6 +25,7 @@ QUALITY = ROOT / "out/project-quality-public.json"
 DRAFTS = ROOT / "out/candidate-profiles-review.json"
 OUTPUT = ROOT / "out/project-strategy-public.json"
 BRANCHES = ROOT / "out/project-branch-activity-public.json"
+COMMIT_DIFFS = ROOT / "out/project-commit-diff-audit-public.json"
 
 # Readiness for presentation is NOT a binary consequence of CI.
 def classify(*, strategic_priority: int | None, ci_status: str, has_test_path: bool,
@@ -137,8 +138,81 @@ def branch_signal(row: dict | None, quality: dict | None) -> dict:
     }
 
 
+def diff_index(selection: dict, branches: dict | None,
+               report: dict | None) -> dict:
+    """Correlate a pinned public branch scan to bounded file-category evidence."""
+    if report is None:
+        return {}
+    if (branches is None or not isinstance(report, dict)
+            or report.get("schema") != 1 or report.get("visibility") != "public"
+            or report.get("automatic_publication") is not False
+            or report.get("private_inputs_accessed") is not False
+            or report.get("only_file_category_evidence") is not True
+            or report.get("not_functional_or_test_execution_validation") is not True
+            or report.get("source_branch_generated_at") != branches.get("generated_at")
+            or report.get("source_selection_generated_at") != selection.get("generated_at")):
+        raise ValueError("Informe de diffs privado o desincronizado")
+    result = {}
+    entries = report.get("repos")
+    if not isinstance(entries, list) or len(entries) > 100:
+        raise ValueError("Lista de diffs inválida o no acotada")
+    for row in entries:
+        if not isinstance(row, dict) or row.get("visibility") != "public":
+            raise ValueError("Diff privado rechazado")
+        name = row.get("repo")
+        if not isinstance(name, str) or not NAME_RE.fullmatch(name) or name in result:
+            raise ValueError("Repo duplicado o inválido en diffs")
+        audits = row.get("audited")
+        if not isinstance(audits, list) or len(audits) > 5:
+            raise ValueError("Muestras diff sin límite")
+        for audit in audits:
+            sha = audit.get("sha") if isinstance(audit, dict) else None
+            if (not isinstance(sha, str) or not SHA_RE.fullmatch(sha)
+                    or audit.get("url") != f"https://github.com/{name}/commit/{sha}"
+                    or audit.get("status") not in (
+                        "code_or_test_files_present", "only_docs_or_other_paths",
+                        "incomplete_file_list", "no_changed_files",
+                        "commit_sha_mismatch", "unavailable")
+                    or audit.get("filename_categories_only") is not True
+                    or audit.get("not_test_execution_or_functional_validation") is not True
+                    or type(audit.get("matching_declared_kind")) is not bool):
+                raise ValueError("Referencia diff no fiable")
+        result[name] = audits
+    expected = {row["repo"] for row in branches.get("repos", [])}
+    if set(result) != expected:
+        raise ValueError("Auditoría diff con cobertura de repos incompleta")
+    return result
+
+
+def enrich_branch_signal(signal: dict, name: str, diffs: dict) -> dict:
+    if not diffs:
+        return signal
+    # If HEAD changed between scans, discard both the branch claim and its
+    # corresponding diff evidence instead of failing or falsely presenting it.
+    if signal.get("branch_evidence_status") == "default_head_changed":
+        return signal
+    samples = signal.get("branch_commit_samples", [])
+    audited = diffs[name]
+    if len(samples) != len(audited):
+        raise ValueError("Auditoría diff no coincide con muestras de ramas")
+    combined = []
+    for sample, item in zip(samples, audited):
+        if (item["sha"] != sample["sha"] or item["url"] != sample["url"]
+                or item.get("declared_kind") != sample["kind"]):
+            raise ValueError("Diff de commit ajeno a la muestra")
+        combined.append({
+            **sample, "path_category_status": item["status"],
+            "declared_kind_has_corresponding_path": item["matching_declared_kind"],
+            "path_categories": item.get("counts"),
+            "path_scan_complete": item.get("scan_complete") is True,
+            "filename_category_is_not_runtime_or_test_execution_proof": True,
+        })
+    return {**signal, "branch_commit_samples": combined}
+
+
 def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
-                 *, branch_report: dict | None = None) -> dict:
+                 *, branch_report: dict | None = None,
+                 diff_report: dict | None = None) -> dict:
     configured_projects(config)
     if any(obj.get("visibility") != "public" for obj in (selection, quality, drafts)):
         raise ValueError("Datos privados rechazados de selección pública")
@@ -168,6 +242,7 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
     priorities = {repo: p["priority"] for p in config.get("projects", [])
                   for repo in p["repos"]}
     branch_rows = branch_map_for_selection(selection, branch_report)
+    diffs = diff_index(selection, branch_report, diff_report)
     result = []
     seen_repos = set()
     for section, candidate in candidates:
@@ -196,7 +271,8 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
             )
             if draft and draft.get("warnings"):
                 reasons.append("Borrador con comprobaciones pendientes")
-            branch_evidence = branch_signal(branch_rows.get(repo), q)
+            branch_evidence = enrich_branch_signal(
+                branch_signal(branch_rows.get(repo), q), repo, diffs)
             if branch_evidence["unmerged_code_7d"] + branch_evidence["unmerged_tests_7d"]:
                 reasons.append("Actividad pública en ramas aún no integradas en la rama predeterminada")
             if branch_rows and not branch_evidence["branch_scan_complete"]:
@@ -235,7 +311,8 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
                 raise ValueError("Repositorio duplicado en seguimiento")
             seen_repos.add(repo)
             priority = priorities.get(repo)
-            branch_evidence = branch_signal(branch_rows.get(repo), None)
+            branch_evidence = enrich_branch_signal(
+                branch_signal(branch_rows.get(repo), None), repo, diffs)
             if (candidate.get("spotlight") is not False and
                     branch_evidence["unmerged_code_7d"] + branch_evidence["unmerged_tests_7d"] > 0):
                 branch_only_watchlist.append({
@@ -273,6 +350,8 @@ def build_public(selection: dict, quality: dict, drafts: dict, config: dict,
         "all_active_candidates_considered": True,
         "branch_work_does_not_prove_main_or_ci": True,
         "branch_activity_checked": branch_report is not None,
+        "public_commit_path_categories_checked": diff_report is not None,
+        "file_path_categories_do_not_prove_functionality_or_test_runs": True,
         "branch_selection_generated_at": (
             branch_report["source_selection_generated_at"] if branch_report else None),
         "proposed_slate": result,
@@ -287,7 +366,9 @@ def main() -> None:
     drafts = json.loads(DRAFTS.read_text(encoding="utf-8"))
     cfg = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
     branch_report = json.loads(BRANCHES.read_text(encoding="utf-8"))
-    result = build_public(selection, quality, drafts, cfg, branch_report=branch_report)
+    diff_report = json.loads(COMMIT_DIFFS.read_text(encoding="utf-8"))
+    result = build_public(selection, quality, drafts, cfg,
+                          branch_report=branch_report, diff_report=diff_report)
     OUTPUT.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{len(result['proposed_slate'])} candidatos públicos clasificados por preparación editorial; "
           "no se cambia el portfolio.")

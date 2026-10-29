@@ -307,3 +307,28 @@ sello BORRADOR INTERNO / NO PUBLICAR; nunca sustituye las fichas
 aprobadas, la CI de la rama predeterminada ni el PDF de producción.
 Un informe antiguo o con cobertura parcial no constituye prueba de
 ausencia de trabajo. La línea base PSM sigue sin recertificarse.
+
+## Auditoría acotada de archivos modificados por commits destacados
+
+La fase public_commit_diff_audit analiza exclusivamente muestras públicas
+versionadas obtenidas por la auditoría de ramas. Antes de consultar cada
+commit comprueba que el repositorio no sea privado. Inspecciona como máximo
+cinco commits por repositorio y cien entradas de archivos por commit; los
+resultados guardan sólo conteos de tipos code/tests/docs/other, nunca rutas,
+contenidos, parches ni datos privados. La auditoría distingue repositorio
+inaccesible, SHA discrepante, lista truncada, ausencia de archivos y
+documentación sin rutas de código/pruebas identificadas.
+
+El workflow genera out/project-commit-diff-audit-public.json antes de
+selección estratégica y revisa correspondencia exacta de snapshot, SHA,
+repositorio, permalink y clase declarada. El markdown y el deck de revisión
+señalan si se identificaron rutas compatibles con el asunto del commit.
+Una carpeta o ruta de tests no demuestra que esos tests se hayan ejecutado;
+una ruta de código no demuestra que la funcionalidad funcione.
+
+En la muestra pública de GuiaIA del 29/10/2026 se encontraron cinco
+commits con archivos clasificados como código o tests. Cuatro de las cinco
+muestras tenían rutas acordes a su categoría declarada y una muestra
+categorizada test no tenía ninguna ruta reconocida como tests. Es una
+heurística de rutas, no un juicio sobre calidad del commit o éxito de QA.
+Nada de esta fase aprueba o publica automáticamente una ficha o PDF.

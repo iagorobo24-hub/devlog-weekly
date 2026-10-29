@@ -157,10 +157,19 @@ def build_review_slides(report: dict, profiles: dict, portfolio: dict,
         examples = c.get("unmerged_commit_samples", [])
         if not examples:
             continue
+        def path_note(sample):
+            if "path_category_status" not in sample:
+                return "Archivos modificados aún no auditados"
+            if sample.get("path_scan_complete") is not True:
+                return "Inspección de rutas incompleta"
+            if sample.get("declared_kind_has_corresponding_path") is True:
+                return "Rutas compatibles identificadas; ejecución NO verificada"
+            return "No se identificaron rutas compatibles con el asunto"
         evidence_links = "".join(
             '<a class="pf-evidence" href="' + esc(sample["url"]) + '">'
             '<strong>ASUNTO DECLARADO: ' + ('CÓDIGO' if sample["kind"] == "code" else 'TEST') + '</strong>'
             '<span>' + esc(sample["subject"][:145]) + '</span>'
+            '<span>' + esc(path_note(sample)) + '</span>'
             '<b>SHA ' + esc(sample["sha"][:10]) + ' ↗</b></a>'
             for sample in examples[:3]
         )

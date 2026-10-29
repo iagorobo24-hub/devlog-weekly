@@ -93,9 +93,19 @@ def render(strategy: dict, drafts: dict) -> str:
                 # Use text not interpreted as HTML markup from GitHub commit subjects.
                 from html import escape
                 subject = escape(clean(item["subject"]), quote=True)
+                diff_status = item.get("path_category_status")
+                if diff_status is None:
+                    audit_note = "cambios de archivos no auditados"
+                elif item.get("path_scan_complete") is not True:
+                    audit_note = "inspección de rutas incompleta o no disponible"
+                elif item.get("declared_kind_has_corresponding_path") is True:
+                    audit_note = "rutas de archivo compatibles con el asunto identificadas"
+                else:
+                    audit_note = "no se identificaron rutas correspondientes al asunto"
                 content.append(
                     f"- {label}: {subject} "
-                    f"([SHA {item['sha'][:12]}]({item['url']})) — **sin verificar ejecución**"
+                    f"([SHA {item['sha'][:12]}]({item['url']})) — "
+                    f"{audit_note}; **sin verificar ejecución**"
                 )
     historical = strategy.get("historical_watchlist", [])
     if historical:
