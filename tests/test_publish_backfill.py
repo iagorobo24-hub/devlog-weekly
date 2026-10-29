@@ -44,6 +44,21 @@ class HistoryPublishTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "públicos"):
             publish_backfill.make_upload_plan(self.folder, "gdrive")
 
+    def test_upload_uses_immutable_flag(self):
+        import os
+        from unittest.mock import patch
+        from src import publish
+        with patch("src.publish.shutil.which", return_value="/usr/bin/rclone"):
+            with patch("src.publish.subprocess.run") as run:
+                with patch.dict(os.environ, {"RCLONE_DRIVE_CLIENT_ID": "", "RCLONE_DRIVE_CLIENT_SECRET": ""}):
+                    self.write()
+                    src = self.folder / "2026-W36.md"
+                    publish.upload(src, "gdrive:Portfolio/historico-verificable/test.md",
+                                   "[gdrive]\\ntype = drive\\n", "gdrive", immutable=True)
+                    args = run.call_args.args[0]
+                    self.assertIn("--immutable", args)
+                    self.assertEqual(args[-3], "copyto")
+
     def test_rejects_duplicate_weeks(self):
         self.write()
         self.manifest["weeks"].append({"week": "2026-W37"})
