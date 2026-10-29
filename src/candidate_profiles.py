@@ -60,6 +60,13 @@ def validate(profile: dict, quality: dict | None) -> dict:
         and int(run_url[len(run_prefix):]) > 0
     )
     verified_run_url = run_url if supported_ci else None
+    pitch = profile.get("pitch", "")
+    limitations = profile.get("limitations", [])
+    if (not isinstance(pitch, str) or len(pitch) > 320
+            or not isinstance(limitations, list) or len(limitations) > 8
+            or any(not isinstance(x, str) or not 10 <= len(x) <= 360
+                   for x in limitations)):
+        raise ValueError("narrativa pública candidata inválida")
     citations = []
     for claim in profile["statements"]:
         if (not isinstance(claim, dict) or claim.get("kind") not in SUPPORTED_KINDS
@@ -110,6 +117,7 @@ def validate(profile: dict, quality: dict | None) -> dict:
     return {
         "id": profile["id"], "title": profile["title"], "repo": repo,
         "revision": revision, "draft_only": True, "visibility": "public",
+        "pitch": pitch, "limitations": limitations,
         "readiness": "requires_editorial_review",
         "warnings": reasons,
         "sources": citations,

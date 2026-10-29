@@ -72,6 +72,8 @@ jobs:
         run: uv run python -m src.editorial_coverage_gate
       - name: Generar comparativa de revisión sin sustituir el portfolio
         run: uv run python -m src.render_portfolio_review --no-html
+      - name: Componer el portfolio V3 propuesto sin publicar
+        run: uv run python -m src.render_portfolio_proposal
       - uses: actions/upload-artifact@v4
         with:
           name: project-selection-public-preview
@@ -91,5 +93,7 @@ jobs:
             out/editorial-coverage-public.md
             out/portfolio-review-v2.md
             out/portfolio-review-v2-manifest.json
+            out/portfolio-proposal-v3.md
+            out/portfolio-proposal-v3-manifest.json
           if-no-files-found: error
           retention-days: 14

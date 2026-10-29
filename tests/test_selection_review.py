@@ -26,6 +26,25 @@ class SelectionReviewTests(unittest.TestCase):
                          ["iagorobo24-hub/proyecto-pfc-iago-duran"])
         self.assertTrue(all(not p["automatic_publication"] for p in result["recommended"]))
 
+    def test_showcase_missing_is_not_draft_missing(self):
+        found = {"iagorobo24-hub/GuiaIA", "iagorobo24-hub/awesome-tia-portal"}
+        rows = build_review(self.selection, self.editorial, candidate_drafts=found)["recommended"]
+        self.assertEqual(rows[0]["missing_showcase_entries"], ["iagorobo24-hub/GuiaIA"])
+        self.assertEqual(rows[0]["prepared_candidate_drafts"], ["iagorobo24-hub/GuiaIA"])
+        self.assertEqual(rows[0]["missing_candidate_drafts"], [])
+        self.assertEqual(rows[0]["decision"], "review_prepared_candidate")
+        self.assertFalse(rows[0]["automatic_publication"])
+
+    def test_unprepared_profile_still_needs_draft(self):
+        row = build_review(self.selection, self.editorial,
+                           candidate_drafts=set())["recommended"][0]
+        self.assertEqual(row["decision"], "prepare_evidence_profile")
+        self.assertEqual(row["missing_candidate_drafts"], ["iagorobo24-hub/GuiaIA"])
+
+    def test_invalid_draft_inventory_rejected(self):
+        with self.assertRaisesRegex(ValueError, "candidatas inválidas"):
+            build_review(self.selection, self.editorial, candidate_drafts={"../private"})
+
     def test_rejects_private_or_mixed_candidate(self):
         self.selection["ranked"][0]["visibility"] = "private"
         with self.assertRaisesRegex(ValueError, "privado"):

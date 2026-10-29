@@ -40,6 +40,18 @@ class CandidateProfilesTests(unittest.TestCase):
         self.assertIn("/tree/",x["sources"][1]["url"])
         self.assertIn("/blob/",x["sources"][0]["url"])
 
+    def test_narrative_is_bounded_but_not_publication(self):
+        p = deepcopy(PROFILE)
+        p["pitch"] = "Borrador documentado que no acredita ejecución."
+        p["limitations"] = ["La aplicación todavía no está validada de extremo a extremo."]
+        result = validate(p, QUALITY)
+        self.assertEqual(result["pitch"], p["pitch"])
+        self.assertEqual(result["limitations"], p["limitations"])
+        self.assertFalse(result["publication_allowed"])
+        p["limitations"] = ["x" * 361]
+        with self.assertRaisesRegex(ValueError, "narrativa"):
+            validate(p, QUALITY)
+
     def test_stale_revision_blocks_ci_claim(self):
         q = dict(QUALITY, head="b"*40)
         x=validate(PROFILE,q)
