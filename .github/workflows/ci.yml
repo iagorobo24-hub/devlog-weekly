@@ -33,18 +33,12 @@ on:
         type: boolean
         required: false
         default: false
-      prueba_drive_lectura:
-        description: 'TEMPORAL: lectura de carpeta Portfolio en Drive, sin publicar ni imprimir nombres'
-        type: boolean
-        required: false
-        default: false
 
 permissions:
   contents: read
 
 jobs:
   tests:
-    if: github.event_name != 'workflow_dispatch' || inputs.prueba_drive_lectura != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -56,7 +50,7 @@ jobs:
         run: uv run python -m compileall -q src tests
 
   preview:
-    if: github.event_name == 'workflow_dispatch' && !inputs.prueba_drive_lectura
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -174,47 +168,3 @@ jobs:
           path: out/summaries.json
           if-no-files-found: error
           retention-days: 14
-
-  drive_read_only_probe:
-    if: github.event_name == 'workflow_dispatch' && inputs.prueba_drive_lectura == true
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-      - name: Instalar rclone fijado
-        run: bash scripts/install-rclone-pinned.sh
-      - name: Verificar acceso de solo lectura a Portfolio sin revelar contenido
-        shell: bash
-        env:
-          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
-        run: |
-          set -euo pipefail
-          umask 077
-          if [[ -z "${RCLONE_CONF:-}" ]]; then
-            echo "DRIVE_READ_ONLY_ERROR=CONFIG_MISSING"
-            exit 1
-          fi
-          temp_dir="$(mktemp -d)"
-          trap 'rm -rf "$temp_dir"' EXIT
-          printf '%s' "$RCLONE_CONF" > "$temp_dir/rclone.conf"
-          if timeout 90s rclone --config "$temp_dir/rclone.conf" --retries 1 --low-level-retries 1 --contimeout 10s --timeout 30s lsf 'gdrive:Portfolio' --dirs-only --max-depth 1 > "$temp_dir/listing" 2> "$temp_dir/stderr"; then
-            count="$(wc -l < "$temp_dir/listing")"
-            echo "DRIVE_READ_ONLY_OK"
-            echo "PORTFOLIO_VISIBLE_SUBFOLDERS=$count"
-            echo "No Drive files were uploaded, modified or deleted"
-          else
-            if grep -Eqi 'invalid_grant|invalid_client|unauthorized|oauth|refresh_token|401|token expired' "$temp_dir/stderr"; then
-              echo "DRIVE_READ_ONLY_ERROR=OAUTH"
-            elif grep -Eqi '403|permission denied|insufficient permissions' "$temp_dir/stderr"; then
-              echo "DRIVE_READ_ONLY_ERROR=PERMISSIONS"
-            elif grep -Eqi 'directory not found|404|not found' "$temp_dir/stderr"; then
-              echo "DRIVE_READ_ONLY_ERROR=PORTFOLIO_NOT_FOUND"
-            elif grep -Eqi "didn't find section|config file|couldn't find" "$temp_dir/stderr"; then
-              echo "DRIVE_READ_ONLY_ERROR=CONFIG"
-            else
-              echo "DRIVE_READ_ONLY_ERROR=UNCLASSIFIED"
-            fi
-            exit 1
-          fi
