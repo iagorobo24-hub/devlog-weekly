@@ -68,8 +68,7 @@ jobs:
           ./node_modules/.bin/marp --version
       - name: Crear demostración sin secretos ni publicar
         run: |
-          mkdir -p out
-          cp tests/fixtures/weekly_sample.json out/summaries.json
+          uv run python -m tests.prepare_weekly_preview
           uv run python src/render.py
       - name: Portfolio maestro paginado y validación de slides (sin voz, Drive ni estado)
         run: |
