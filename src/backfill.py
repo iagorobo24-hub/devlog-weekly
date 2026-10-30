@@ -18,9 +18,13 @@ from pathlib import Path
 from github import Auth, Github, GithubException
 
 try:
-    from src.collect import collect_closed_issues, collect_closed_prs, collect_commits, load_repos_config
+    from src.collect import (collect_closed_issues, collect_closed_prs,
+                             collect_commits, load_repos_config,
+                             is_rate_limited, with_rate_limit_backoff)
 except ModuleNotFoundError:
-    from collect import collect_closed_issues, collect_closed_prs, collect_commits, load_repos_config
+    from collect import (collect_closed_issues, collect_closed_prs,
+                         collect_commits, load_repos_config,
+                         is_rate_limited, with_rate_limit_backoff)
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT = ROOT / "out" / "backfill"
@@ -151,18 +155,28 @@ def collect_public_repos(gh: Github, start: datetime, end: datetime, config: dic
     results = []
     for item in configs:
         name = item["name"]
-        try:
-            repo = gh.get_repo(name)
-        except GithubException as exc:
-            raise RuntimeError(f"consulta fallida: {name}: {exc}") from exc
-        if repo.private:
-            raise RuntimeError(f"repositorio privado prohibido: {name}")
-        until_inclusive = end - timedelta(microseconds=1)
-        commits, _ = collect_commits(repo, start, until_inclusive)
-        issues = collect_closed_issues(repo, start, until_inclusive)
-        prs = collect_closed_prs(repo, start, until_inclusive)
-        results.append({"name": name, "commits": commits, "issues_closed": issues, "prs_closed": prs})
-        LOG.info("%s: %d commits, %d issues, %d PRs", name, len(commits), len(issues), len(prs))
+
+        def read_one_repo():
+            try:
+                repo = gh.get_repo(name)
+            except GithubException as exc:
+                if is_rate_limited(exc):
+                    raise
+                raise RuntimeError(f"consulta fallida: {name}: {exc}") from exc
+            if repo.private:
+                raise RuntimeError(f"repositorio privado prohibido: {name}")
+            until_inclusive = end - timedelta(microseconds=1)
+            commits, _ = collect_commits(repo, start, until_inclusive)
+            issues = collect_closed_issues(repo, start, until_inclusive)
+            prs = collect_closed_prs(repo, start, until_inclusive)
+            return {"name": name, "commits": commits,
+                    "issues_closed": issues, "prs_closed": prs}
+
+        record = with_rate_limit_backoff(read_one_repo)
+        results.append(record)
+        LOG.info("%s: %d commits, %d issues, %d PRs",
+                 name, len(record["commits"]), len(record["issues_closed"]),
+                 len(record["prs_closed"]))
     return results
 
 

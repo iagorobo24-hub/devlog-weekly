@@ -9,13 +9,15 @@ import shutil
 
 try:
     from src.portfolio_data import ROOT, load_portfolio
-    from src.render_portfolio_v2 import PDF_PATH, MANIFEST_PATH, write_preview
+    from src import master_release_provenance as master_proof
+    from src.render_portfolio_v2 import PDF_PATH, MANIFEST_PATH, MD_PATH, THEME, write_preview
     from src.render_video_v2 import VIDEO_PATH, SRT_PATH, render
     from src.quality_gate import check_pdf
     from src.render_master import had_showcase_activity_this_week
 except ModuleNotFoundError:
     from portfolio_data import ROOT, load_portfolio
-    from render_portfolio_v2 import PDF_PATH, MANIFEST_PATH, write_preview
+    import master_release_provenance as master_proof
+    from render_portfolio_v2 import PDF_PATH, MANIFEST_PATH, MD_PATH, THEME, write_preview
     from render_video_v2 import VIDEO_PATH, SRT_PATH, render
     from quality_gate import check_pdf
     from render_master import had_showcase_activity_this_week
@@ -34,12 +36,21 @@ def should_build(force: bool = False) -> bool:
 
 
 def prepare(*, force: bool = False, smoke: bool = False) -> bool:
+    # No prior run may authorize a later skipped or failed release.
+    receipt = master_proof.RECEIPT_PATH
+    if receipt.is_symlink():
+        raise ValueError("recibo de publicación master inseguro")
+    receipt.unlink(missing_ok=True)
     if not should_build(force):
         LOG.info("Sin cambios en proyectos destacados; no regenerar portfolio")
         return False
     for existing in (PUBLIC_PDF, PUBLIC_MP4, PUBLIC_SRT):
         if existing.is_file():
             raise RuntimeError(f"salida final preexistente: {existing}")
+    source_inputs = (ROOT / "content" / "portfolio" / "projects.yml", THEME)
+    if any(not src.is_file() or src.is_symlink() for src in source_inputs):
+        raise ValueError("fuente editorial master ausente o insegura")
+    frozen_sources = {src: src.read_bytes() for src in source_inputs}
     write_preview(pdf=True)
     report = check_pdf(PDF_PATH, MANIFEST_PATH)
     LOG.info("Control PDF previo a publicación: %s", report)
@@ -57,7 +68,14 @@ def prepare(*, force: bool = False, smoke: bool = False) -> bool:
             raise ValueError(f"copia con contenido modificado: {source.name}")
         os.replace(temporary, target)
     check_pdf(PUBLIC_PDF, MANIFEST_PATH)
-    LOG.info("Portfolio V2 preparado: PDF + MP4 + SRT; copia íntegra y metadatos PDF validados")
+    if any(src.read_bytes() != expected for src, expected in frozen_sources.items()):
+        raise RuntimeError("fuente editorial master alterada durante la generación")
+    master_proof.write_receipt(
+        receipt=receipt, projects=ROOT / "content" / "portfolio" / "projects.yml",
+        manifest=MANIFEST_PATH, markdown=MD_PATH, theme=THEME,
+        pdf=PUBLIC_PDF, video=PUBLIC_MP4, subtitles=PUBLIC_SRT,
+        run_id=os.environ.get("GITHUB_RUN_ID"))
+    LOG.info("Portfolio V2 preparado: PDF + MP4 + SRT con recibo verificable")
     return True
 
 

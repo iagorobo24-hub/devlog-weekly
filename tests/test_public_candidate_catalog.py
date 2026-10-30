@@ -19,7 +19,7 @@ PINNED = {
     "tia-rocaroibas": ("iagorobo24-hub/T-IA-Portal-RocaRoibas",
                        "5bb5397297724e2c3a4c1c7e67b4132368f12516"),
     "guiaia": ("iagorobo24-hub/GuiaIA",
-               "685bd6d1f614793db7e34667846b4d83b199b550"),
+               "060497ccb56bb0a2e9b5e488c84256e51bfbf2ef"),
     "atm10sky-es-es-localization": ("iagorobo24-hub/atm10sky-es-es-localization",
                                      "1e0c648aafbf0204de1eaa2a191bcb7faf13b8c1"),
     "automaton": ("iagorobo24-hub/AUTOMATON",

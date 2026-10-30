@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
+      - run: uv sync --locked
       - name: Contratos de privacidad y ranking
         run: uv run python -m unittest tests.test_project_selection -v
       - name: Descubrir exclusivamente repositorios públicos

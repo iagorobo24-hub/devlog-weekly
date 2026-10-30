@@ -42,7 +42,7 @@ projects:
       - Diagnosticar CI fallida en el SHA de main y volver a probar aplicación.
       - Comprobar que las capturas representan el estado final sin cuentas ni datos de terceros.
   - repo: iagorobo24-hub/GuiaIA
-    revision: 685bd6d1f614793db7e34667846b4d83b199b550
+    revision: 060497ccb56bb0a2e9b5e488c84256e51bfbf2ef
     role: main
     claim:
       source_path: README.md

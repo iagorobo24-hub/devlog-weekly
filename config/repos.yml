@@ -4,6 +4,17 @@ defaults:
 repos:
   # Solo repos PÚBLICOS: este repo es público y publica sus narrativas.
   # No añadas repos privados (se filtraría su nombre y su contenido).
+  # Seguimiento semanal y presentación editorial son decisiones separadas:
+  # showcase=false NO impide su aparición en el devlog semanal.
+  - name: iagorobo24-hub/GuiaIA
+    showcase: false
+    pitch: "GuiaIA para Minecraft: desarrollo de acompañante, observabilidad y pruebas; no implica jugabilidad certificada"
+  - name: iagorobo24-hub/T-IA-Portal-RocaRoibas
+    showcase: false
+    pitch: "Herramientas para ingeniería TIA Portal: automatización y validaciones; sin certificar ejecución industrial"
+  - name: iagorobo24-hub/atm10sky-es-es-localization
+    showcase: false
+    pitch: "Localización española de ATM10 Sky; cambios de código y traducciones por verificar en contexto de juego"
   - name: iagorobo24-hub/AUTOMATON
     showcase: false
   - name: iagorobo24-hub/awesome-tia-portal

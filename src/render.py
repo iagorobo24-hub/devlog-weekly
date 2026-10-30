@@ -193,6 +193,31 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
+    try:
+        from src import deck_provenance
+    except ModuleNotFoundError:
+        import deck_provenance
+
+    # Never let a previous successful render authorize a later broken render.
+    if deck_provenance.MANIFEST_PATH.is_symlink():
+        raise ValueError("manifiesto de procedencia es enlace simbólico")
+    deck_provenance.MANIFEST_PATH.unlink(missing_ok=True)
+    for artifact in (DECK_MD_PATH, DECK_PDF_PATH):
+        if artifact.is_symlink():
+            raise ValueError(f"artefacto de renderizado inseguro: {artifact.name}")
+
+    # Verify the original collection bytes immediately before rendering.
+    # The earlier preflight alone is not enough if inputs change meanwhile.
+    deck_provenance.verify_collected_source(
+        collected=deck_provenance.COLLECTED_PATH, summary=SUMMARIES_PATH)
+
+    # Keep an initial snapshot: a concurrent edit during conversion must
+    # not produce a manifest that attests to different inputs.
+    source_snapshots = {
+        path: path.read_bytes()
+        for path in (deck_provenance.COLLECTED_PATH, SUMMARIES_PATH,
+                     TEMPLATE_DIR / TEMPLATE_NAME, THEME_PATH)
+    }
     summaries = load_summaries()
     markdown = render_markdown(summaries)
 
@@ -203,8 +228,20 @@ def main() -> None:
     if args.no_pdf:
         return
 
+    # Remove a stale PDF before running Marp: exit code 0 alone does not
+    # prove that this invocation actually generated a new file.
+    DECK_PDF_PATH.unlink(missing_ok=True)
     convert_to_pdf(DECK_MD_PATH, DECK_PDF_PATH)
-    log.info("escrito %s", DECK_PDF_PATH)
+    if (any(path.read_bytes() != original for path, original in source_snapshots.items())
+            or DECK_MD_PATH.read_text(encoding="utf-8") != markdown):
+        raise RuntimeError("la síntesis, el tema o la plantilla cambiaron durante el render")
+    deck_provenance.write_manifest(
+        summary=SUMMARIES_PATH, collected=deck_provenance.COLLECTED_PATH,
+        markdown=DECK_MD_PATH, pdf=DECK_PDF_PATH,
+        template=TEMPLATE_DIR / TEMPLATE_NAME, theme=THEME_PATH,
+        manifest=deck_provenance.MANIFEST_PATH)
+    log.info("escrito %s, procedencia verificable en %s",
+             DECK_PDF_PATH, deck_provenance.MANIFEST_PATH)
 
 
 if __name__ == "__main__":

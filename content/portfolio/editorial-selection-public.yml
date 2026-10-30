@@ -52,7 +52,7 @@ main_cases:
     limits: Es un proyecto académico; documentación y presencia de E2E no demuestran el estado del despliegue ni de la CI en este corte.
     takeaway: Integración práctica de procesos de negocio en una aplicación modular.
   - repo: iagorobo24-hub/GuiaIA
-    revision: 685bd6d1f614793db7e34667846b4d83b199b550
+    revision: 060497ccb56bb0a2e9b5e488c84256e51bfbf2ef
     title: GuiaIA
     field: IA aplicada a Minecraft y sistemas agénticos
     problem: Los asistentes no deben fingir que observan o modifican un mundo de Minecraft sin señales fiables y permisos acotados.

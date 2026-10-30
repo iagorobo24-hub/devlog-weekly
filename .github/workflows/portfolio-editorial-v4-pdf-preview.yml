@@ -19,9 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
+      - run: uv sync --locked
       - uses: actions/setup-node@v7
-      - run: npm install -g @marp-team/marp-cli
+        with:
+          node-version: '22'
+      - name: Instalar Marp CLI desde package-lock.json
+        run: |
+          npm ci --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
+          ./node_modules/.bin/marp --version
       - name: Retrieve reviewed public Markdown and manifest
         uses: actions/download-artifact@v4
         with:
@@ -32,6 +38,10 @@ jobs:
           path: out
       - name: Verify immutable source
         run: uv run python -m src.verify_editorial_review_pdf --preflight
+      - name: Reject outdated public V4 revisions before PDF export
+        run: uv run --locked python -m src.editorial_live_freshness
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Export editorial PDF without publishing
         run: >
           marp out/portfolio-editorial-closure-v4.md

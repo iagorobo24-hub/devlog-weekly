@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -32,6 +33,18 @@ PINNED = re.compile(r"^/iagorobo24-hub/[A-Za-z0-9_.-]+/blob/[0-9a-f]{40}/[A-Za-z
 CI_RUN = re.compile(r"^/iagorobo24-hub/[A-Za-z0-9_.-]+/actions/runs/[0-9]+$")
 CI_STATES = {"success_at_head", "failure_or_cancelled", "unknown",
              "pending", "inconclusive", "unavailable"}
+ANCHOR = re.compile(r'<a\b[^>]*\bhref="([^"]+)"', re.IGNORECASE)
+
+
+def verified_link(url: str, expected_repo: str) -> bool:
+    """Only canonical GitHub evidence for the owning case slide is allowed."""
+    parsed = urlparse(url)
+    if (parsed.scheme != "https" or parsed.netloc != "github.com"
+            or parsed.query or parsed.fragment or not expected_repo
+            or not parsed.path.startswith("/" + expected_repo + "/")
+            or any(x in (".", "..") for x in parsed.path.split("/"))):
+        return False
+    return bool(PINNED.fullmatch(parsed.path) or CI_RUN.fullmatch(parsed.path))
 
 
 def validate_source(md: str, manifest: dict) -> dict:
@@ -69,7 +82,20 @@ def validate_source(md: str, manifest: dict) -> dict:
         raise ValueError("Markdown de 9 diapositivas incompleto")
     if any(term not in md for group in KEYWORDS for term in group):
         raise ValueError("Falta contenido editorial esperado")
-    return {"sha256": sha, "pages": 9, "projects": names}
+    # Capture every declared source link, keeping duplicate references
+    # intentional. The PDF must render exactly this multiset per page.
+    slides = md.split("<!-- _class: pf-closure-")[1:]
+    if len(slides) != 9:
+        raise ValueError("No se pueden atribuir las diapositivas a sus fuentes")
+    expected_links = []
+    for i, slide in enumerate(slides):
+        repo = names[i - 2] if 2 <= i <= 6 else None
+        links = ANCHOR.findall(slide)
+        if any(not verified_link(url, repo) for url in links):
+            raise ValueError(f"Página {i + 1}: enlace ajeno, no canónico o no fijado")
+        expected_links.append(links)
+    return {"sha256": sha, "pages": 9, "projects": names,
+            "expected_page_links": expected_links}
 
 
 def normalize_metadata(path: Path) -> None:
@@ -96,6 +122,10 @@ def validate_pdf(path: Path, source: dict) -> dict:
     import pymupdf
     if not path.is_file() or path.is_symlink() or path.stat().st_size < 5000:
         raise ValueError("PDF no existe o inválido")
+    expected = source.get("expected_page_links")
+    if not isinstance(expected, list) or len(expected) != 9 or any(
+            not isinstance(x, list) for x in expected):
+        raise ValueError("No hay inventario de enlaces por diapositiva")
     doc = pymupdf.open(path)
     summaries = []
     links = 0
@@ -124,12 +154,12 @@ def validate_pdf(path: Path, source: dict) -> dict:
                 url = link.get("uri")
                 if not url:
                     continue
-                parsed = urlparse(url)
-                if (parsed.scheme != "https" or parsed.netloc != "github.com"
-                        or not (PINNED.fullmatch(parsed.path)
-                                or CI_RUN.fullmatch(parsed.path))):
-                    raise ValueError(f"Página {index+1}: URL no versionada")
+                repo = source["projects"][index - 2] if 2 <= index <= 6 else None
+                if not verified_link(url, repo):
+                    raise ValueError(f"Página {index+1}: URL ajena o no versionada")
                 urls.append(url)
+            if Counter(urls) != Counter(expected[index]):
+                raise ValueError(f"Página {index+1}: enlaces PDF distintos del original")
             # In the case-study slides evidence links are mandatory; if
             # markup is clipped, Marp may silently omit the entire link.
             required_links = 2 if index in (2, 3, 4) else (1 if index in (5, 6) else 0)

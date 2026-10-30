@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       modo_prueba:
-        description: 'Verificar Drive con un PDF aislado; no sobrescribir W44 ni guardar state'
+        description: 'Solo Drive: PDF sintético, SHA256; sin GitHub, NVIDIA ni state'
         type: boolean
         required: true
         default: true
       solo_portfolio:
-        description: 'Publicar solo el portfolio V2; no recopilar ni modificar devlog semanal ni state'
+        description: 'Portfolio V2: requiere desmarcar modo_prueba; no modifica devlog semanal ni state'
         type: boolean
         required: false
         default: false
@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
+      - run: uv sync --locked
       - name: Tests de regresión
         run: uv run python -m unittest discover -s tests -v
 
@@ -43,32 +43,61 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Rechazar modos manuales incompatibles
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.solo_portfolio == true && inputs.modo_prueba == true }}
+        run: |
+          echo "::error::Para solo_portfolio, desmarca modo_prueba: el modo de prueba verifica exclusivamente Drive."
+          exit 1
+
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
+      - run: uv sync --locked
+
+      - name: Validar configuración de Drive antes de recopilar y generar
+        # No muestra tokens ni llama a Drive. Un secreto incompleto falla antes
+        # de consumir API de NVIDIA, render y almacenamiento temporal.
+        run: uv run --locked python -m src.drive_readiness
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+          RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
+          RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
+          RCLONE_REMOTE: gdrive
 
       - uses: actions/setup-node@v7
-      - run: npm install -g @marp-team/marp-cli
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
+        with:
+          node-version: '22'
+      - name: Instalar Marp CLI desde package-lock.json
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
+        run: |
+          npm ci --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
+          ./node_modules/.bin/marp --version
 
       - name: Instalar rclone
-        run: curl https://rclone.org/install.sh | sudo bash
+        run: bash scripts/install-rclone-pinned.sh
 
       - name: Instalar ffmpeg
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Recoger
-        if: ${{ inputs.solo_portfolio != true }}
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
         run: uv run python src/collect.py
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Sintetizar
-        if: ${{ inputs.solo_portfolio != true }}
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
         run: uv run python src/synthesize.py
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
 
+      - name: Validar consistencia antes de renderizar o publicar
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
+        run: uv run python -m src.confirm_pipeline_state --check-only
+
       - name: Renderizar
-        if: ${{ inputs.solo_portfolio != true }}
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
         run: uv run python src/render.py
 
       - name: Publicar
@@ -79,52 +108,14 @@ jobs:
           RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
 
-      - name: Prueba de extremo a extremo en Drive, con descarga y SHA256
+      - name: Prueba aislada de Drive con PDF sintético y SHA256
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.modo_prueba == true && inputs.solo_portfolio != true }}
         env:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
           RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
-        run: |
-          uv run python - <<'PY'
-          import hashlib
-          import os
-          import tempfile
-          from pathlib import Path
-          from src.publish import upload
-
-          original = Path("out/deck.pdf")
-          if not original.is_file() or original.stat().st_size == 0:
-              raise SystemExit("No se generó un PDF válido")
-          remote_name = os.environ.get("RCLONE_REMOTE", "gdrive")
-          destination = (
-              f"{remote_name}:Portfolio/verificaciones/"
-              f"{os.environ['GITHUB_RUN_ID']}/devlog.pdf"
-          )
-          config = os.environ["RCLONE_CONF"]
-          if not config:
-              raise SystemExit("Falta RCLONE_CONF")
-          upload(original, destination, config, remote_name, immutable=True)
-          with tempfile.TemporaryDirectory() as directory:
-              copy = Path(directory) / "devlog-download.pdf"
-              upload(Path(destination), str(copy), config, remote_name)
-              sha_local = hashlib.sha256(original.read_bytes()).hexdigest()
-              sha_drive = hashlib.sha256(copy.read_bytes()).hexdigest()
-              if sha_local != sha_drive:
-                  raise SystemExit("ERROR: no coincide SHA256 del PDF en Drive")
-          print("SUCCESS: Drive ha guardado y devuelto un PDF byte a byte idéntico")
-          print(f"Ruta aislada verificada: {destination}")
-          print(f"SHA256: {sha_local}")
-          PY
-
-      - name: Confirmar estado
-        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
-        # Deliberadamente después de publish.py: si algo falla antes de aquí,
-        # el job para y state/ no se toca, así que la semana se puede
-        # reintentar sin perder la ventana ni duplicar narrativa.
-        run: |
-          uv run python src/collect.py --commit-state
-          uv run python src/synthesize.py --commit-state
+          RCLONE_REMOTE: gdrive
+        run: uv run --locked python -m src.drive_smoke
 
       - name: Generar y validar Portfolio Editorial V2 (PDF + vídeo + subtítulos)
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false }}
@@ -145,6 +136,14 @@ jobs:
           RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
           RCLONE_DRIVE_CLIENT_ID: ${{ secrets.RCLONE_DRIVE_CLIENT_ID }}
           RCLONE_DRIVE_CLIENT_SECRET: ${{ secrets.RCLONE_DRIVE_CLIENT_SECRET }}
+
+      - name: Confirmar estado
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}
+        # Después de publicar semanal y master: si alguna fase falla,
+        # no se avanza state/. Reintentos pueden repetir publicaciones
+        # externas, pero no pierden la ventana GitHub pendiente.
+        run: |
+          uv run python -m src.confirm_pipeline_state
 
       - name: Guardar estado
         if: ${{ (github.event_name != 'workflow_dispatch' || inputs.modo_prueba == false) && inputs.solo_portfolio != true }}

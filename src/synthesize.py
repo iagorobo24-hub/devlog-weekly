@@ -13,7 +13,7 @@ Flags para iterar en desarrollo:
   --repo NAME       procesa solo el/los repo(s) indicados (repetible)
   --dry-run         no llama al modelo; imprime el prompt que se enviaría
   --no-state        ignora el historial acumulado (como si fuera la primera vez)
-  --commit-state    no sintetiza: escribe state/narrative/*.md a partir de
+  --commit-state    valida y confirma ambos dominios de state/ a partir de
                      out/summaries.json ya generado
   --model MODEL_ID  fuerza un modelo concreto, sin cadena de fallback
 
@@ -50,6 +50,23 @@ import time
 from pathlib import Path
 
 from openai import OpenAI
+
+try:
+    from src.project_selection_core import categorize
+except ModuleNotFoundError:
+    from project_selection_core import categorize
+
+
+NOISE_KINDS = {"psm_noise", "maintenance"}
+
+
+def substantive_commits(repo: dict) -> list[dict]:
+    """Known PSM/maintenance-only subjects cannot claim product progress.
+
+    Unknown commit conventions are preserved for review (no silent omission).
+    """
+    return [change for change in repo.get("commits", [])
+            if categorize(change.get("message")) not in NOISE_KINDS]
 
 ROOT = Path(__file__).resolve().parent.parent
 COLLECTED_PATH = ROOT / "out" / "collected.json"
@@ -108,11 +125,17 @@ def narrative_path(repo_name: str) -> Path:
     return NARRATIVE_DIR / f"{safe_name}.md"
 
 
-def load_collected() -> dict:
+def load_collected_with_bytes() -> tuple[dict, bytes]:
+    """Parse and retain the *same bytes* later authenticated by commit."""
     if not COLLECTED_PATH.exists():
         log.error("%s no existe; corre collect.py primero", COLLECTED_PATH)
         sys.exit(1)
-    return json.loads(COLLECTED_PATH.read_text(encoding="utf-8"))
+    data = COLLECTED_PATH.read_bytes()
+    return json.loads(data), data
+
+
+def load_collected() -> dict:
+    return load_collected_with_bytes()[0]
 
 
 def load_previous_narrative(repo_name: str) -> str:
@@ -123,17 +146,17 @@ def load_previous_narrative(repo_name: str) -> str:
 
 
 def has_activity(repo: dict) -> bool:
-    return bool(repo["commits"] or repo["issues_closed"] or repo["prs_closed"] or repo["tags_new"])
+    return bool(substantive_commits(repo) or repo["issues_closed"]
+                or repo["prs_closed"] or repo["tags_new"])
 
 
 def condense(repo: dict) -> dict:
-    """Solo lo que cambió esta semana. README y lenguajes se dejan fuera a
-    propósito: son estáticos y empujan al modelo a re-describir el proyecto
-    en vez de contar qué se movió (para eso ya están 'pitch' y el historial)."""
+    """Only substantive or unknown changes, preserving raw totals and limits."""
+    selected = substantive_commits(repo)
     commit_events = [
         {"sha": c["sha"], "fecha": c.get("date"),
          "titulo": c["message"].splitlines()[0]}
-        for c in repo["commits"][:MAX_COMMITS_LISTED]
+        for c in selected[:MAX_COMMITS_LISTED]
     ]
     return {
         "repo": repo["name"],
@@ -142,8 +165,10 @@ def condense(repo: dict) -> dict:
         "diff_stats": repo["diff_stats"],
         "commits": {
             "total": len(repo["commits"]),
+            "relevantes_o_sin_clasificar": len(selected),
+            "mantenimiento_y_psm_omitidos": len(repo["commits"]) - len(selected),
             "eventos": commit_events,
-            "truncado": len(repo["commits"]) > MAX_COMMITS_LISTED,
+            "truncado": len(selected) > MAX_COMMITS_LISTED,
         },
         "issues_cerradas": [{"number": i["number"], "title": i["title"]} for i in repo["issues_closed"]],
         "prs_cerradas": [{"number": p["number"], "title": p["title"], "merged": p["merged"]} for p in repo["prs_closed"]],
@@ -159,12 +184,15 @@ def build_prompt(repo: dict, previous_narrative: str) -> str:
     )
 
 
-def trivial_summary(previous_narrative: str) -> dict:
+def trivial_summary(previous_narrative: str, *, routine_only: bool = False) -> dict:
     return {
-        "titular": "Sin actividad esta semana",
+        "titular": "Sin avances sustanciales detectados",
         "avances": [],
-        "estado": "Sin cambios respecto a la semana anterior." if previous_narrative else "Sin actividad registrada todavía.",
-        "narrativa_actualizada": previous_narrative,
+        "estado": ("Solo actividad rutinaria o PSM, sin avance técnico demostrado."
+                   if routine_only else
+                   ("Sin cambios respecto a la semana anterior."
+                    if previous_narrative else "Sin actividad registrada todavía.")),
+        "narrativa_actualizada": previous_narrative or "Sin actividad registrada todavía.",
         "trivial": True,
         "model_used": None,
     }
@@ -207,7 +235,8 @@ def call_model_once(client: OpenAI, model: str, prompt: str) -> dict:
     missing = REQUIRED_KEYS - data.keys()
     if missing:
         raise ValueError(f"faltan claves en la respuesta del modelo: {missing}")
-    data.setdefault("trivial", False)
+    # The AI cannot independently demote real source activity to 'trivial'.
+    data["trivial"] = False
     return data
 
 
@@ -236,8 +265,8 @@ def call_model_with_fallback(client: OpenAI, model_chain: list[str], prompt: str
 
 def synthesize_repo(client: OpenAI | None, model_chain: list[str], repo: dict, previous_narrative: str, dry_run: bool) -> dict | None:
     if not has_activity(repo):
-        log.info("%s: sin actividad, no llamo al modelo", repo["name"])
-        return trivial_summary(previous_narrative)
+        log.info("%s: sin avances sustanciales, no llamo al modelo", repo["name"])
+        return trivial_summary(previous_narrative, routine_only=bool(repo["commits"]))
 
     prompt = build_prompt(repo, previous_narrative)
 
@@ -257,13 +286,8 @@ def commit_state() -> None:
     if not OUT_PATH.exists():
         log.error("%s no existe todavía; corre synthesize.py sin --commit-state primero", OUT_PATH)
         sys.exit(1)
-    summaries = json.loads(OUT_PATH.read_text(encoding="utf-8"))
-    NARRATIVE_DIR.mkdir(parents=True, exist_ok=True)
-    count = 0
-    for repo in summaries["repos"]:
-        narrative_path(repo["name"]).write_text(repo["narrativa_actualizada"].strip() + "\n", encoding="utf-8")
-        count += 1
-    log.info("historial confirmado para %d repos", count)
+    from src.confirm_pipeline_state import confirm_state
+    confirm_state()
 
 
 def parse_args() -> argparse.Namespace:
@@ -271,7 +295,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo", action="append", help="Procesa solo este repo (repetible). Por defecto, todos.")
     parser.add_argument("--dry-run", action="store_true", help="No llama al modelo; imprime el prompt.")
     parser.add_argument("--no-state", action="store_true", help="Ignora el historial acumulado en state/narrative/.")
-    parser.add_argument("--commit-state", action="store_true", help="No sintetiza: confirma state/narrative/ a partir de out/summaries.json.")
+    parser.add_argument("--commit-state", action="store_true", help="Valida recolección y síntesis antes de confirmar todo state/.")
     parser.add_argument(
         "--model",
         default=None,
@@ -310,7 +334,7 @@ def verified_sources(repo: dict) -> list[dict]:
         raise ValueError("repositorio inválido para enlaces")
     base = "https://github.com/" + name
     out = []
-    for commit in repo["commits"]:
+    for commit in substantive_commits(repo):
         sha = commit["sha"]
         if not re.fullmatch(r"[0-9a-fA-F]{7,64}", sha):
             raise ValueError("SHA inválido")
@@ -348,7 +372,7 @@ def main() -> None:
         log.error("falta la variable de entorno NVIDIA_API_KEY")
         sys.exit(1)
 
-    collected = load_collected()
+    collected, collected_bytes = load_collected_with_bytes()
     repos = collected["repos"]
     if args.repo:
         wanted = {r.lower() for r in args.repo}
@@ -368,7 +392,10 @@ def main() -> None:
         summary = synthesize_repo(client, model_chain, repo, previous_narrative, args.dry_run)
         if summary is None:
             continue
-        if not summary.get("trivial"):
+        # One deterministic authority for this flag, regardless of adapters
+        # or future LLM implementations. Missing flags cannot hide a repo.
+        summary["trivial"] = not has_activity(repo)
+        if not summary["trivial"]:
             validate_generated_summary(repo, summary)
         results.append(
             {
@@ -394,7 +421,11 @@ def main() -> None:
 
     ensure_complete_summaries(repos, results)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    output = {"generated_at": collected["generated_at"], "repos": results}
+    import hashlib
+    output = {"generated_at": collected["generated_at"], "repos": results,
+              "source_collected_sha256": hashlib.sha256(collected_bytes).hexdigest()}
+    if collected.get("github_run_id"):
+        output["github_run_id"] = collected["github_run_id"]
     OUT_PATH.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     log.info(
         "escrito %s (%d/%d repos) — corre con --commit-state al final del pipeline para confirmar el historial",

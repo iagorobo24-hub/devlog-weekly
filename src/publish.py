@@ -7,10 +7,13 @@ Sigue la estructura del skeleton:
     ├── master/portfolio.mp4
     └── assets/
 
---target semanal (por defecto) sube out/deck.pdf. La semana se calcula a
-partir de "generated_at" en out/summaries.json, no de la fecha de hoy: así
-el destino es determinista a partir de los datos que ya recogió el
-pipeline, no de cuándo por casualidad se ejecuta publish.py.
+--target semanal (por defecto) publica out/deck.pdf con versión inmutable
+y verifica mediante SHA256 tanto la versión como el alias semanal. La
+semana se calcula a partir de "generated_at" en out/summaries.json, no
+de la fecha de hoy: así el destino es determinista a partir de los datos
+que ya recogió el pipeline, no de cuándo por casualidad se ejecuta.
+La versión usa GITHUB_RUN_ID-GITHUB_RUN_ATTEMPT en Actions, o una
+marca temporal UTC distinta al ejecutar la publicación manualmente.
 
 --target master sube out/portfolio.pdf a Portfolio/master/portfolio.pdf, y
 out/portfolio.mp4 (si existe) a Portfolio/master/portfolio.mp4 — el vídeo
@@ -49,7 +52,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -94,24 +97,197 @@ def master_subtitle_remote_path(remote: str) -> str:
     return f"{remote}:Portfolio/master/portfolio.srt"
 
 
-def verified_master_release(uploads: list[tuple[Path, str]], rclone_conf: str,
+def master_current_remote_path(remote: str) -> str:
+    """One release pointer for readers requiring a coherent PDF/MP4/SRT set."""
+    return f"{remote}:Portfolio/master/current.json"
+
+
+MASTER_FILES = ("portfolio.pdf", "portfolio.mp4", "portfolio.srt")
+
+
+def _master_release_document(remote: str, run_id: str, frozen: dict) -> dict:
+    return {
+        "schema": 1,
+        "run_id": run_id,
+        "files": {
+            name: {
+                "path": f"Portfolio/master/versions/{run_id}/{name}",
+                "sha256": frozen[name].hex(),
+            }
+            for name in MASTER_FILES
+        },
+    }
+
+
+def _validate_master_release_document(document: object, remote: str) -> dict:
+    """Fail closed before following a remote path from a published pointer."""
+    if not isinstance(document, dict) or set(document) != {"schema", "run_id", "files"}:
+        raise ValueError("puntero master inválido")
+    run_id = document.get("run_id")
+    if (document.get("schema") != 1 or not isinstance(run_id, str)
+            or not re.fullmatch(r"[0-9]{5,20}-[0-9]{1,6}", run_id)):
+        raise ValueError("puntero master con ejecución inválida")
+    files = document.get("files")
+    if not isinstance(files, dict) or set(files) != set(MASTER_FILES):
+        raise ValueError("puntero master incompleto")
+    for name in MASTER_FILES:
+        entry = files[name]
+        if (not isinstance(entry, dict) or set(entry) != {"path", "sha256"}
+                or entry["path"] != f"Portfolio/master/versions/{run_id}/{name}"
+                or not isinstance(entry["sha256"], str)
+                or not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"])):
+            raise ValueError("puntero master con versión o hash no canónicos")
+    return document
+
+
+def download_verified_master_snapshot(remote: str, rclone_conf: str,
+                                      destination: Path) -> dict:
+    """Download a coherent immutable master release, never the mutable aliases.
+
+    Caller should supply a fresh empty local directory. No files are written
+    until the remote pointer is parsed and all three bytes are verified.
+    """
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", remote):
+        raise ValueError("nombre remoto inválido")
+    if (destination.exists() or destination.is_symlink()
+            or not destination.parent.is_dir()
+            or destination.parent.is_symlink()):
+        raise ValueError("directorio destino debe ser nuevo y tener padre seguro")
+    with tempfile.TemporaryDirectory(
+            prefix="devlog-master-snapshot-", dir=destination.parent) as folder:
+        temp = Path(folder)
+        pointer_path = temp / "current.json"
+        upload(Path(master_current_remote_path(remote)), str(pointer_path),
+               rclone_conf, remote)
+        try:
+            document = _validate_master_release_document(
+                json.loads(pointer_path.read_text(encoding="utf-8")), remote)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise ValueError("puntero master JSON inválido") from exc
+        for name in MASTER_FILES:
+            info = document["files"][name]
+            local = temp / name
+            upload(Path(f"{remote}:{info['path']}"), str(local), rclone_conf, remote)
+            if hashlib.sha256(local.read_bytes()).hexdigest() != info["sha256"]:
+                raise ValueError(f"snapshot master corrupto: {name}")
+        # Publish the local set as one directory rename, not three
+        # independently visible files that a reader could observe half-written.
+        complete = temp / "complete"
+        complete.mkdir()
+        for name in MASTER_FILES:
+            shutil.copyfile(temp / name, complete / name)
+        os.replace(complete, destination)
+    return document
+
+
+def verified_weekly_release(local: Path, alias: str, rclone_conf: str,
                             remote: str, run_id: str) -> None:
+    """Preserve a version; read it back before making the weekly alias visible.
+
+    Upload failures or corrupted staged bytes never update the public weekly
+    path. A failure while replacing the alias leaves the pinned version
+    intact and prevents the pipeline from confirming GitHub state.
+    """
+    if not re.fullmatch(r"[0-9]{5,20}-[0-9]{1,6}", run_id):
+        raise ValueError("GITHUB_RUN_ID inválido para publicación semanal versionada")
+    expected_prefix = f"{remote}:Portfolio/semanal/"
+    match = re.fullmatch(re.escape(expected_prefix) +
+                         r"(20[0-9]{2}-W(?:0[1-9]|[1-4][0-9]|5[0-3]))/devlog\.pdf",
+                         alias)
+    if match is None:
+        raise ValueError("ruta semanal no canónica")
+    if not local.is_file() or local.is_symlink() or local.stat().st_size == 0:
+        raise ValueError("PDF semanal inexistente o inválido")
+    with local.open("rb") as stream:
+        if stream.read(5) != b"%PDF-":
+            raise ValueError("archivo semanal sin cabecera PDF")
+    frozen_digest = hashlib.sha256(local.read_bytes()).digest()
+    versioned = (f"{remote}:Portfolio/semanal/{match.group(1)}"
+                 f"/versions/{run_id}/devlog.pdf")
+    upload(local, versioned, rclone_conf, remote, immutable=True)
+
+    with tempfile.TemporaryDirectory(prefix="weekly-verify-") as tmp:
+        verified = Path(tmp) / "staged.pdf"
+        upload(Path(versioned), str(verified), rclone_conf, remote)
+        if (hashlib.sha256(verified.read_bytes()).digest() != frozen_digest
+                or hashlib.sha256(local.read_bytes()).digest() != frozen_digest):
+            raise ValueError("Drive no devolvió bytes idénticos del PDF semanal versionado")
+
+        # Only after the versioned bytes match the original do we replace
+        # the visible weekly alias, then read the alias back as well.
+        upload(Path(versioned), alias, rclone_conf, remote)
+        restored_alias = Path(tmp) / "published.pdf"
+        upload(Path(alias), str(restored_alias), rclone_conf, remote)
+        if hashlib.sha256(restored_alias.read_bytes()).digest() != frozen_digest:
+            raise ValueError("Drive no devolvió bytes idénticos del PDF semanal publicado")
+    log.info("PDF semanal versionado y comprobado: %s", run_id)
+
+
+def verified_master_release(uploads: list[tuple[Path, str]], rclone_conf: str,
+                            remote: str, run_id: str,
+                            expected_sha256: dict[str, str] | None = None) -> None:
     """Version all outputs + SHA256 readback before replacing live aliases."""
     if not re.fullmatch(r"[0-9]{5,20}-[0-9]{1,6}", run_id):
         raise ValueError("GITHUB_RUN_ID inválido para publicación versionada")
     stage_paths = []
+    for local, alias in uploads:
+        if not local.is_file() or local.is_symlink() or local.stat().st_size == 0:
+            raise ValueError(f"artefacto master inválido: {local.name}")
+    # Freeze every source before the first external write, so a changed
+    # local source cannot silently produce a mixed PDF/video/subtitle release.
+    frozen = {local: hashlib.sha256(local.read_bytes()).digest()
+              for local, _ in uploads}
+    if expected_sha256 is not None:
+        if (not isinstance(expected_sha256, dict)
+                or any(expected_sha256.get(
+                    {"portfolio.pdf": "pdf", "portfolio.mp4": "mp4",
+                     "portfolio.srt": "srt"}.get(local.name, local.name))
+                    != frozen[local].hex()
+                    for local, _ in uploads)):
+            raise ValueError("artefactos master distintos del recibo aprobado")
     for local, alias in uploads:
         versioned = f"{remote}:Portfolio/master/versions/{run_id}/{local.name}"
         upload(local, versioned, rclone_conf, remote, immutable=True)
         stage_paths.append((local, alias, versioned))
     with tempfile.TemporaryDirectory(prefix="master-v2-verify-") as tempdir:
         for local, _, remote_version in stage_paths:
-            restored = Path(tempdir) / local.name
+            restored = Path(tempdir) / ("stage-" + local.name)
             upload(Path(remote_version), str(restored), rclone_conf, remote)
-            if hashlib.sha256(local.read_bytes()).digest() != hashlib.sha256(restored.read_bytes()).digest():
+            if (frozen[local] != hashlib.sha256(restored.read_bytes()).digest()
+                    or frozen[local] != hashlib.sha256(local.read_bytes()).digest()):
                 raise ValueError(f"Drive no devolvió bytes idénticos: {local.name}")
-    for _, alias, versioned in stage_paths:
-        upload(Path(versioned), alias, rclone_conf, remote)
+        for local, alias, versioned in stage_paths:
+            upload(Path(versioned), alias, rclone_conf, remote)
+            restored = Path(tempdir) / ("alias-" + local.name)
+            upload(Path(alias), str(restored), rclone_conf, remote)
+            if hashlib.sha256(restored.read_bytes()).digest() != frozen[local]:
+                raise ValueError(f"Drive no devolvió bytes idénticos del alias master: {local.name}")
+    # Readers of current.json always resolve *versioned* bytes. A failed
+    # stage or mutable-alias update never advances this single release marker.
+    # Direct PDF/MP4/SRT aliases remain non-atomic for legacy consumers.
+    names = {local.name for local, _ in uploads}
+    if len(uploads) == len(MASTER_FILES) and names == set(MASTER_FILES):
+        frozen_by_name = {local.name: frozen[local] for local, _ in uploads}
+        document = _master_release_document(remote, run_id, frozen_by_name)
+        _validate_master_release_document(document, remote)
+        payload = (json.dumps(document, ensure_ascii=False, sort_keys=True,
+                              separators=(",", ":")) + "\n").encode("utf-8")
+        expected = hashlib.sha256(payload).digest()
+        stage = f"{remote}:Portfolio/master/versions/{run_id}/release.json"
+        current = master_current_remote_path(remote)
+        with tempfile.TemporaryDirectory(prefix="master-release-marker-") as folder:
+            source = Path(folder) / "release.json"
+            source.write_bytes(payload)
+            upload(source, stage, rclone_conf, remote, immutable=True)
+            staged = Path(folder) / "staged.json"
+            upload(Path(stage), str(staged), rclone_conf, remote)
+            if hashlib.sha256(staged.read_bytes()).digest() != expected:
+                raise ValueError("manifiesto master versionado no coincide")
+            upload(Path(stage), current, rclone_conf, remote)
+            checked = Path(folder) / "current.json"
+            upload(Path(current), str(checked), rclone_conf, remote)
+            if hashlib.sha256(checked.read_bytes()).digest() != expected:
+                raise ValueError("puntero master actual no coincide")
     log.info("master V2 versionado, verificado y actualizado: %s", run_id)
 
 
@@ -141,7 +317,9 @@ def upload(local_path: Path, dest: str, rclone_conf: str, remote: str, immutable
             log.warning("OAuth Drive propio no configurado; el client_id compartido de rclone dejará de funcionar en 2026")
         command = [rclone, "--config", str(conf_path)]
         if immutable:
-            command.append("--immutable")
+            # Versioned retries must compare bytes, not the mtime of a newly
+            # created local manifest containing exactly the same JSON.
+            command.extend(["--immutable", "--checksum"])
         command.extend(["copyto", str(local_path), dest])
         subprocess.run(command, check=True, env=env)
     finally:
@@ -191,6 +369,40 @@ def main() -> None:
     if not uploads:
         return
 
+    if args.target == "semanal":
+        # A verified Drive upload proves byte integrity, not that the PDF
+        # corresponds to this run's collected and synthesized data.
+        try:
+            from src import deck_provenance
+        except ModuleNotFoundError:
+            import deck_provenance
+        deck_provenance.verify_manifest(
+            summary=SUMMARIES_PATH, collected=ROOT / "out" / "collected.json",
+            pdf=DECK_PDF_PATH,
+            markdown=ROOT / "out" / "deck.md",
+            template=ROOT / "templates" / "deck.md.j2",
+            theme=ROOT / "templates" / "theme.css",
+            manifest=ROOT / "out" / "deck-provenance.json",
+            expected_run_id=os.environ.get("GITHUB_RUN_ID"))
+
+    release_proof = None
+    if args.target == "master" and os.environ.get("PORTFOLIO_V2_RELEASE") == "1":
+        # A complete set of files is not proof that this invocation rendered
+        # and quality-checked it. Skipped/failed builds leave no release proof.
+        try:
+            from src import master_release_provenance as master_proof
+        except ModuleNotFoundError:
+            import master_release_provenance as master_proof
+        release_proof = master_proof.verify_receipt(
+            receipt=ROOT / "out" / "portfolio-master-release-proof.json",
+            expected_run_id=os.environ.get("GITHUB_RUN_ID"),
+            projects=ROOT / "content" / "portfolio" / "projects.yml",
+            manifest=ROOT / "out" / "portfolio-v2-manifest.json",
+            markdown=ROOT / "out" / "portfolio-v2.md",
+            theme=ROOT / "templates" / "portfolio.css",
+            pdf=PORTFOLIO_PDF_PATH, video=PORTFOLIO_MP4_PATH,
+            subtitles=PORTFOLIO_SRT_PATH)
+
     rclone_conf = os.environ.get("RCLONE_CONF")
     if not rclone_conf:
         log.error("falta la variable de entorno RCLONE_CONF")
@@ -198,9 +410,26 @@ def main() -> None:
 
     if args.target == "master" and os.environ.get("PORTFOLIO_V2_RELEASE") == "1":
         try:
-            verified_master_release(uploads, rclone_conf, args.remote, os.environ.get("GITHUB_RUN_ID", "") + "-" + os.environ.get("GITHUB_RUN_ATTEMPT", "1"))
+            verified_master_release(
+                uploads, rclone_conf, args.remote,
+                os.environ.get("GITHUB_RUN_ID", "") + "-"
+                + os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
+                expected_sha256=release_proof["sha256"])
         except (ValueError, subprocess.CalledProcessError) as exc:
             log.error("Publicación master V2 bloqueada: %s", exc)
+            sys.exit(1)
+        return
+
+    if args.target == "semanal":
+        # GitHub Actions provides immutable run ID + attempt. Local manual
+        # publishing gets a distinct timestamp-based attempt identifier.
+        ident = os.environ.get("GITHUB_RUN_ID") or datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
+        try:
+            verified_weekly_release(uploads[0][0], uploads[0][1], rclone_conf,
+                                    args.remote, f"{ident}-{attempt}")
+        except (ValueError, OSError, subprocess.CalledProcessError) as exc:
+            log.error("Publicación semanal bloqueada: %s", exc)
             sys.exit(1)
         return
 

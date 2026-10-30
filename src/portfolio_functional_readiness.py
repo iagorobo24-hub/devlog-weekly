@@ -71,7 +71,7 @@ def github_jobs(repo, run_id, token):
     return json.loads(content)
 
 
-def extract(payload):
+def extract(payload, expected_run_id=None):
     if not isinstance(payload, dict):
         raise ValueError("Jobs no estructurados")
     jobs = payload.get("jobs")
@@ -83,9 +83,17 @@ def extract(payload):
     for job in jobs:
         if not isinstance(job, dict) or not isinstance(job.get("steps"), list):
             raise ValueError("Job sin pasos")
-        if job.get("conclusion") not in {"success", "failure", "cancelled",
-                                         "skipped", "timed_out", "neutral"}:
+        if expected_run_id is not None and job.get("run_id") != expected_run_id:
+            raise ValueError("Job no pertenece al run fijado")
+        conclusion = job.get("conclusion")
+        status = job.get("status")
+        if conclusion not in {"success", "failure", "cancelled", "skipped",
+                              "timed_out", "neutral", "action_required",
+                              "startup_failure", None}:
             raise ValueError("Resultado de job desconocido")
+        if conclusion is None and status not in {
+                "queued", "in_progress", "waiting", "requested", "pending"}:
+            raise ValueError("Job sin resultado final ni progreso válido")
         if len(job["steps"]) > 150:
             raise ValueError("Demasiados pasos")
         job_results.append(job["conclusion"])
@@ -119,21 +127,29 @@ def build(source, fetch, now):
         inspection = "no_push_run"
         if url:
             try:
-                found = extract(fetch(c["repo"], url.rsplit("/", 1)[-1]))
+                run_id = int(url.rsplit("/", 1)[-1])
+                found = extract(fetch(c["repo"], str(run_id)),
+                                expected_run_id=run_id)
                 inspection = "jobs_checked"
             except urllib.error.HTTPError as error:
                 if error.code not in (401, 403, 404, 429, 500, 502, 503, 504):
                     raise
                 inspection = "jobs_unavailable"
         jobs = found["job_results"]
-        if inspection == "jobs_checked" and ci == "success_at_head":
-            consistent = "success" in jobs and not any(
-                s in ("failure", "cancelled", "timed_out") for s in jobs)
-        elif inspection == "jobs_checked" and ci == "failure_or_cancelled":
-            consistent = any(s in ("failure", "cancelled", "timed_out") for s in jobs)
-        else:
-            consistent = inspection != "jobs_checked"
         steps = found["steps"]
+        # Not inspected (or CI inconclusive) is UNKNOWN, never successful
+        # reconciliation. A green job with a failed security step is not
+        # acceptable evidence even if the workflow used continue-on-error.
+        consistent = None
+        failure = {"failure", "cancelled", "timed_out", "action_required",
+                   "startup_failure"}
+        if inspection == "jobs_checked" and ci == "success_at_head":
+            consistent = (bool(jobs) and "success" in jobs
+                          and not any(s in failure or s is None for s in jobs)
+                          and not any(s["kind"] == "security"
+                                      and s["status"] != "success" for s in steps))
+        elif inspection == "jobs_checked" and ci == "failure_or_cancelled":
+            consistent = any(s in failure for s in jobs)
         security = [s["name"] for s in steps if s["kind"] == "security"
                     and s["status"] == "failure"]
         skipped = [s["name"] for s in steps if s["kind"] in (
@@ -163,11 +179,14 @@ def markdown(result):
         "",
         "El estado del CI no equivale a funcionamiento en TIA/PLCSIM, Minecraft ni SPA.",
         "",
-        "| Caso | CI en HEAD | Checks correctos | Omitidos | Seguridad |",
-        "|---|---|---:|---:|---|",
+        "| Caso | CI en HEAD | Lectura jobs | Coherencia | Checks correctos | Omitidos | Seguridad |",
+        "|---|---|---|---|---:|---:|---|",
     ]
     for c in result["cases"]:
+        reconciled = ("sí" if c["ci_jobs_consistent"] is True else
+                      "no" if c["ci_jobs_consistent"] is False else "no evaluable")
         rows.append(f"| {c['repo']} | {c['ci_status']} | "
+                    f"{c['inspection']} | {reconciled} | "
                     f"{len(c['checks_passed'])} | {len(c['checks_skipped'])} | "
                     f"{len(c['security_failures'])} fallos |")
     for c in result["cases"]:

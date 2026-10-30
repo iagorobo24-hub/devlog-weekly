@@ -33,10 +33,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
+      - run: uv sync --locked
       - name: Pruebas
         run: uv run python -m unittest discover -s tests -v
-      - run: npm install -g @marp-team/marp-cli
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Instalar Marp CLI desde package-lock.json
+        run: |
+          npm ci --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
+          ./node_modules/.bin/marp --version
       - name: Reconstruir archivos históricos
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -54,7 +61,7 @@ jobs:
 
       - name: Instalar rclone
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publicar_drive == true }}
-        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+        run: bash scripts/install-rclone-pinned.sh
       - name: Guardar histórico en carpeta nueva de Drive (sin sobreescribir)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publicar_drive == true }}
         env:

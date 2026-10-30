@@ -9,6 +9,11 @@ on:
       - 'templates/**'
       - 'config/**'
       - '.github/workflows/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/**'
   pull_request:
     paths:
       - 'src/**'
@@ -16,6 +21,11 @@ on:
       - 'templates/**'
       - 'config/**'
       - '.github/workflows/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/**'
   workflow_dispatch:
     inputs:
       prueba_modelo:
@@ -33,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
+      - run: uv sync --locked
       - name: Tests de regresión
         run: uv run python -m unittest discover -s tests -v
       - name: Compilación estática
@@ -47,8 +57,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
-      - run: npm install -g @marp-team/marp-cli
+      - run: uv sync --locked
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Instalar Marp CLI desde package-lock.json
+        run: |
+          npm ci --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
+          ./node_modules/.bin/marp --version
       - name: Crear demostración sin secretos ni publicar
         run: |
           mkdir -p out
@@ -137,7 +154,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.0.1
-      - run: uv sync
+      - run: uv sync --locked
       - name: Recoger metadatos públicos para la prueba
         env:
           GITHUB_TOKEN: ${{ github.token }}

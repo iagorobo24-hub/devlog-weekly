@@ -16,12 +16,12 @@ style: |
 
 {{ periodo_desde }} → {{ periodo_hasta }}
 
-**{{ active_count }} de {{ total_count }} repositorios con actividad**
+**{{ active_count }} de {{ total_count }} repositorios con avances sustanciales**
 
 _Generado: {{ generado }}_
 
 {% if inactive %}
-Sin cambios: {{ inactive | join(', ') }}
+Sin avances sustanciales: {{ inactive | join(', ') }}
 {% endif %}
 
 {% for section in sections %}

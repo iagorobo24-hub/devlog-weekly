@@ -2,7 +2,7 @@ version: 1
 id: guiaia
 title: GuiaIA — acompañante de Minecraft
 repo: iagorobo24-hub/GuiaIA
-revision: 685bd6d1f614793db7e34667846b4d83b199b550
+revision: 060497ccb56bb0a2e9b5e488c84256e51bfbf2ef
 visibility: public
 editorial_status: draft_only
 pitch: "Herramientas abiertas para observación y asistencia segura sobre mundos de Minecraft; todavía en desarrollo."

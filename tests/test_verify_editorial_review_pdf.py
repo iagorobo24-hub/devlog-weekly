@@ -1,6 +1,6 @@
 import hashlib
 import unittest
-from src.verify_editorial_review_pdf import validate_source
+from src.verify_editorial_review_pdf import validate_source, verified_link
 
 NAMES = ["iagorobo24-hub/"+n for n in (
     "T-IA-Portal-RocaRoibas", "proyecto-pfc-iago-duran", "GuiaIA",
@@ -66,6 +66,33 @@ class PdfSourceTests(unittest.TestCase):
             "/other-user/GuiaIA/actions/runs/40821224773"))
         self.assertIsNone(CI_RUN.fullmatch(
             "/iagorobo24-hub/GuiaIA/actions/runs/not-a-number"))
+
+    def test_only_evidence_from_the_slide_owner_is_accepted(self):
+        repo=NAMES[0]
+        good="https://github.com/"+repo+"/blob/"+"a"*40+"/README.md"
+        self.assertTrue(verified_link(good,repo))
+        self.assertFalse(verified_link(good,NAMES[2]))
+        self.assertFalse(verified_link(good+"?download=1",repo))
+        self.assertFalse(verified_link(good+"#fragment",repo))
+        self.assertFalse(verified_link(good.replace("/README.md","/../README.md"),repo))
+        self.assertFalse(verified_link("https://github.com.evil.com/"+repo+"/blob/"+"a"*40+"/README.md",repo))
+
+    def test_source_links_are_pinned_to_correct_page(self):
+        good="https://github.com/"+NAMES[0]+"/blob/"+"a"*40+"/README.md"
+        changed=MD.replace("TIA Portal RocaRoibas 44 scripts",
+                           'TIA Portal RocaRoibas 44 scripts <a href="'+good+'">evidence</a>')
+        m=manifest();m["markdown_sha256"]=hashlib.sha256(changed.encode()).hexdigest()
+        out=validate_source(changed,m)
+        self.assertEqual(out["expected_page_links"][2],[good])
+        self.assertTrue(all(not links for i,links in enumerate(out["expected_page_links"]) if i!=2))
+
+    def test_source_rejects_foreign_link_on_a_case_page(self):
+        foreign="https://github.com/"+NAMES[2]+"/blob/"+"a"*40+"/README.md"
+        changed=MD.replace("TIA Portal RocaRoibas 44 scripts",
+                           'TIA Portal RocaRoibas 44 scripts <a href="'+foreign+'">wrong</a>')
+        m=manifest();m["markdown_sha256"]=hashlib.sha256(changed.encode()).hexdigest()
+        with self.assertRaisesRegex(ValueError,"enlace ajeno"):
+            validate_source(changed,m)
 
     def test_missing_slide_blocked(self):
         changed=MD.replace("<!-- _class:", "<!-- broken:",1)

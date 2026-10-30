@@ -1,6 +1,7 @@
 import unittest
+from urllib.error import HTTPError
 from datetime import datetime, timezone
-from src.portfolio_functional_readiness import validate, extract, build
+from src.portfolio_functional_readiness import validate, extract, build, markdown
 
 NOW = datetime(2026,10,29,21,tzinfo=timezone.utc)
 
@@ -31,7 +32,8 @@ def jobs(repo,rid):
         states=[("Run unittest suite","success")];status="success"
     else:
         states=[("Run CI-safe workspace checks","success")];status="success"
-    return {"total_count":1,"jobs":[{"conclusion":status,
+    return {"total_count":1,"jobs":[{"run_id":int(rid),"status":"completed",
+        "conclusion":status,
         "steps":[{"name":name,"conclusion":state} for name,state in states]}]}
 
 class ReadinessTests(unittest.TestCase):
@@ -65,11 +67,55 @@ class ReadinessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"desfasado"):
             validate(x)
 
+    def test_unchecked_jobs_are_unknown_not_consistent(self):
+        report=build(source(),jobs,NOW)
+        for i in (3,4):
+            self.assertEqual(report["cases"][i]["inspection"],"no_push_run")
+            self.assertIsNone(report["cases"][i]["ci_jobs_consistent"])
+
+    def test_unavailable_jobs_do_not_become_a_positive_check(self):
+        def unavailable(repo, rid):
+            raise HTTPError("https://api.github.com/", 403,
+                            "rate limit", {}, None)
+        report=build(source(),unavailable,NOW)
+        case=report["cases"][0]
+        self.assertEqual(case["inspection"],"jobs_unavailable")
+        self.assertIsNone(case["ci_jobs_consistent"])
+        self.assertIn("no evaluable",markdown(report))
+        self.assertFalse(report["safe_to_publish"])
+
+    def test_job_provenance_required_and_run_id_mismatch_rejected(self):
+        good=jobs("iagorobo24-hub/GuiaIA","9")
+        self.assertEqual(extract(good,expected_run_id=9)["job_results"],["success"])
+        good["jobs"][0]["run_id"]=12345
+        with self.assertRaisesRegex(ValueError,"run fijado"):
+            extract(good,expected_run_id=9)
+        with self.assertRaisesRegex(ValueError,"run fijado"):
+            build(source(),lambda repo,rid: good,NOW)
+
+    def test_pending_job_is_inconclusive_not_a_workflow_success(self):
+        pending={"total_count":1,"jobs":[{"run_id":9,"status":"in_progress",
+                                          "conclusion":None,"steps":[]}]}
+        result=build(source(),lambda repo,rid:pending,NOW)
+        self.assertFalse(result["cases"][0]["ci_jobs_consistent"])
+        self.assertFalse(result["safe_to_publish"])
+
+    def test_security_failure_blocks_success_even_if_job_green(self):
+        payload={"total_count":1,"jobs":[{"run_id":9,"status":"completed",
+            "conclusion":"success","steps":[
+                {"name":"Unit tests","conclusion":"success"},
+                {"name":"Production dependency audit","conclusion":"failure"}]}]}
+        result=build(source(),lambda repo,rid:payload,NOW)
+        self.assertFalse(result["cases"][0]["ci_jobs_consistent"])
+        self.assertEqual(result["cases"][0]["security_failures"],
+                         ["Production dependency audit"])
+
     def test_incomplete_jobs_blocked(self):
         with self.assertRaisesRegex(ValueError,"incompletos"):
             extract({"total_count":2,"jobs":[{"conclusion":"success","steps":[]}]})
         output=build(source(),lambda repo,rid:{"total_count":1,
-                     "jobs":[{"conclusion":"success","steps":[]}]},NOW)
+                     "jobs":[{"run_id":int(rid),"status":"completed",
+                              "conclusion":"success","steps":[]}]},NOW)
         self.assertFalse(output["cases"][1]["ci_jobs_consistent"])
         self.assertFalse(output["safe_to_publish"])
 

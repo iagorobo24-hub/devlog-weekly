@@ -1,0 +1,9 @@
+{
+  "name": "devlog-weekly-render-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Locked Marp CLI used by CI previews and the weekly renderer",
+  "dependencies": {
+    "@marp-team/marp-cli": "4.5.0"
+  }
+}

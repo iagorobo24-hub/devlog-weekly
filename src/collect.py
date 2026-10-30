@@ -12,8 +12,8 @@ la ventana de esta semana sigue disponible para reintentarlo.
 Flags para iterar en desarrollo:
   --since 7d|30d|<ISO date>   fuerza la ventana, ignora state/ y since_days
   --no-state                  no lee state/last_run.json (como si fuera la primera vez)
-  --commit-state              no recoge nada: lee out/collected.json ya generado
-                               y escribe state/last_run.json a partir de ahí
+  --commit-state              valida recolección y síntesis, y confirma todo
+                               el estado mediante confirm_pipeline_state
 """
 
 from __future__ import annotations
@@ -21,9 +21,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import re
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -37,9 +39,84 @@ OUT_PATH = ROOT / "out" / "collected.json"
 
 README_EXCERPT_LINES = 40
 DURATION_RE = re.compile(r"^(\d+)([dhw])$")
+RATE_LIMIT_RETRIES = 3
+RATE_LIMIT_MAX_WAIT_SECONDS = 60
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger("collect")
+
+
+def _rate_headers(exc: GithubException) -> dict[str, str]:
+    headers = getattr(exc, "headers", None) or {}
+    return {str(k).lower(): str(v).strip() for k, v in headers.items()}
+
+
+def is_rate_limited(exc: GithubException) -> bool:
+    """Only retry actual rate limits, never bad credentials or generic 403s."""
+    if exc.status == 429:
+        return True
+    if exc.status != 403:
+        return False
+    headers = _rate_headers(exc)
+    message = exc.data.get("message", "") if isinstance(exc.data, dict) else exc.data
+    message = str(message or "")
+    return (headers.get("x-ratelimit-remaining") == "0"
+            or "retry-after" in headers or "rate limit" in message.lower())
+
+
+def _rate_wait(exc: GithubException, attempt: int) -> int:
+    """Honor server minimum delay; never cap it and retry before allowed."""
+    headers = _rate_headers(exc)
+    waits = [2 ** attempt]
+    if "retry-after" in headers:
+        try:
+            retry_after = float(headers["retry-after"])
+            if not math.isfinite(retry_after) or retry_after < 0:
+                raise ValueError("Invalid Retry-After")
+            waits.append(math.ceil(retry_after))
+        except (ValueError, OverflowError) as err:
+            raise RuntimeError("GitHub Retry-After no verificable") from err
+    if headers.get("x-ratelimit-remaining") == "0" and "x-ratelimit-reset" in headers:
+        try:
+            reset = float(headers["x-ratelimit-reset"])
+            if not math.isfinite(reset):
+                raise ValueError("Invalid reset")
+            waits.append(math.ceil(reset - time.time()) + 1)
+        except (ValueError, OverflowError) as err:
+            raise RuntimeError("GitHub X-RateLimit-Reset no verificable") from err
+    if ("retry-after" not in headers
+            and not (headers.get("x-ratelimit-remaining") == "0"
+                     and "x-ratelimit-reset" in headers)):
+        # GitHub explicitly requires >= 60 seconds when no reliable
+        # server cooldown is available; short 1/2/4s retries risk bans.
+        waits.append(60 * (2 ** attempt))
+    return max(waits)
+
+
+def with_rate_limit_backoff(operation):
+    """Retry a whole repo snapshot, not one page; fail closed on exhaustion.
+
+    Partially collected data is discarded between attempts, and no state or
+    publication is written here. Long server cooldowns abort cleanly so the
+    next scheduled run can retry without violating the reset window.
+    """
+    spent = 0
+    for attempt in range(RATE_LIMIT_RETRIES + 1):
+        try:
+            return operation()
+        except GithubException as exc:
+            if not is_rate_limited(exc):
+                raise
+            if attempt == RATE_LIMIT_RETRIES:
+                raise RuntimeError("GitHub rate limit: reintentos agotados; no publicar datos parciales") from exc
+            delay = _rate_wait(exc, attempt)
+            if delay > RATE_LIMIT_MAX_WAIT_SECONDS - spent:
+                raise RuntimeError("GitHub rate limit: espera supera el presupuesto; reintentar en otro run") from exc
+            spent += delay
+            log.warning("GitHub rate limit (%s): pausa %ss; reintento %s/%s",
+                        exc.status, delay, attempt + 1, RATE_LIMIT_RETRIES)
+            time.sleep(delay)
+    raise AssertionError("Unreachable retry state")
 
 
 def to_utc(dt: datetime | None) -> datetime | None:
@@ -118,6 +195,8 @@ def collect_diff_stats(repo, commits_desc: list) -> dict:
     try:
         comparison = repo.compare(base_sha, head_sha)
     except GithubException as e:
+        if is_rate_limited(e):
+            raise
         log.warning("no se pudo comparar %s...%s en %s: %s", base_sha, head_sha, repo.full_name, e)
         return {"files_changed": 0, "additions": 0, "deletions": 0}
 
@@ -171,18 +250,22 @@ def collect_tags(repo, previously_seen: set[str]) -> tuple[list[str], list[str]]
 def collect_readme_excerpt(repo) -> str | None:
     try:
         readme = repo.get_readme()
-    except GithubException:
+    except GithubException as exc:
+        if is_rate_limited(exc):
+            raise
         return None
     text = readme.decoded_content.decode("utf-8", errors="replace")
     lines = text.splitlines()[:README_EXCERPT_LINES]
     return "\n".join(lines)
 
 
-def collect_repo(gh: Github, repo_name: str, repo_cfg: dict, since: datetime, until: datetime, previously_seen_tags: set[str]) -> dict | None:
+def _collect_repo_once(gh: Github, repo_name: str, repo_cfg: dict, since: datetime, until: datetime, previously_seen_tags: set[str]) -> dict:
     log.info("recogiendo %s (desde %s)", repo_name, since.isoformat())
     try:
         repo = gh.get_repo(repo_name)
     except GithubException as e:
+        if is_rate_limited(e):
+            raise
         # Fallo crítico: no continuar como si el repositorio no tuviera actividad.
         raise RuntimeError(f"no se pudo acceder a {repo_name}: {e}") from e
 
@@ -199,7 +282,9 @@ def collect_repo(gh: Github, repo_name: str, repo_cfg: dict, since: datetime, un
         # PyGithub inyecta una clave "url" en dicts crudos de respuestas GET
         # (Requester.__postProcess); nos quedamos solo con los pares lenguaje->bytes.
         languages = {k: v for k, v in repo.get_languages().items() if isinstance(v, int)}
-    except GithubException:
+    except GithubException as exc:
+        if is_rate_limited(exc):
+            raise
         languages = {}
     readme_excerpt = collect_readme_excerpt(repo)
 
@@ -220,26 +305,28 @@ def collect_repo(gh: Github, repo_name: str, repo_cfg: dict, since: datetime, un
     }
 
 
+def collect_repo(gh: Github, repo_name: str, repo_cfg: dict, since: datetime,
+                 until: datetime, previously_seen_tags: set[str]) -> dict:
+    return with_rate_limit_backoff(
+        lambda: _collect_repo_once(gh, repo_name, repo_cfg, since, until,
+                                   previously_seen_tags))
+
+
 def commit_state() -> None:
-    """Lee out/collected.json (ya generado por un run normal) y confirma en
-    state/last_run.json la ventana de cada repo. No toca la API de GitHub."""
+    """Legacy flag: validate both outputs and commit both state domains."""
     if not OUT_PATH.exists():
         log.error("%s no existe todavía; corre collect.py sin --commit-state primero", OUT_PATH)
         sys.exit(1)
 
-    collected = json.loads(OUT_PATH.read_text(encoding="utf-8"))
-    last_run = load_last_run()
-    for repo in collected["repos"]:
-        last_run[repo["name"]] = {"since": repo["until"], "tags_seen": repo["tags_all"]}
-    save_last_run(last_run)
-    log.info("estado confirmado para %d repos", len(collected["repos"]))
+    from src.confirm_pipeline_state import confirm_state
+    confirm_state()
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--since", help="Fuerza la ventana (ej. '7d', '30d', o fecha ISO). Ignora state/ y since_days.")
     parser.add_argument("--no-state", action="store_true", help="No lee state/last_run.json.")
-    parser.add_argument("--commit-state", action="store_true", help="No recoge: confirma el estado a partir de out/collected.json.")
+    parser.add_argument("--commit-state", action="store_true", help="No recoge: valida ambos resultados y confirma todo state/.")
     return parser.parse_args()
 
 
@@ -283,6 +370,8 @@ def main() -> None:
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     output = {"generated_at": now.isoformat(), "repos": results}
+    if os.environ.get("GITHUB_RUN_ID"):
+        output["github_run_id"] = os.environ["GITHUB_RUN_ID"]
     OUT_PATH.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     log.info("escrito %s (%d repos) — corre con --commit-state al final del pipeline para confirmar la ventana", OUT_PATH, len(results))
 
