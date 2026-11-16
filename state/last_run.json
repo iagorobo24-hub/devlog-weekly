@@ -1,16 +1,16 @@
 {
   "iagorobo24-hub/AUTOMATON": {
-    "since": "2026-11-09T17:00:24.201581+00:00",
+    "since": "2026-11-16T16:39:15.527030+00:00",
     "tags_seen": []
   },
   "iagorobo24-hub/awesome-tia-portal": {
-    "since": "2026-11-09T17:00:24.201581+00:00",
+    "since": "2026-11-16T16:39:15.527030+00:00",
     "tags_seen": [
       "v0.1.0"
     ]
   },
   "iagorobo24-hub/opencode-telegram-bot": {
-    "since": "2026-11-09T17:00:24.201581+00:00",
+    "since": "2026-11-16T16:39:15.527030+00:00",
     "tags_seen": [
       "v0.24.0",
       "v0.23.1",
@@ -72,7 +72,7 @@
     ]
   },
   "iagorobo24-hub/proyecto-pfc-iago-duran": {
-    "since": "2026-11-09T17:00:24.201581+00:00",
+    "since": "2026-11-16T16:39:15.527030+00:00",
     "tags_seen": [
       "v3.0.0",
       "v2.0.0"
